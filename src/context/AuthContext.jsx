@@ -10,7 +10,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/auth/login`, {
+      const url = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/auth/login`;
+      console.log('Attempting login to:', url);
+      
+      const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -20,12 +23,12 @@ export const AuthProvider = ({ children }) => {
         const userData = await response.json();
         setUser(userData);
         sessionStorage.setItem('zmvms_user', JSON.stringify(userData));
-        return true;
+        return { success: true };
       }
-      return false;
+      return { success: false, message: `Server responded with status: ${response.status}` };
     } catch (err) {
       console.error('Login error:', err);
-      return false;
+      return { success: false, message: `Network error: ${err.message}` };
     }
   };
 
