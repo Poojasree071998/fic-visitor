@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useVisitors } from '../../context/VisitorContext';
 import { useZones } from '../../context/ZoneContext';
 import { useBranch } from '../../context/BranchContext';
+import { useNotification } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { Plus, Search, Filter, MoreVertical, QrCode, X, FileText } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -10,6 +11,7 @@ const VisitorList = () => {
   const { visitors, allVisitors, updateVisitorStatus, updateVisitorTracking, networkIp } = useVisitors();
   const { zones } = useZones();
   const { activeBranch } = useBranch();
+  const { addNotification } = useNotification();
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedVisitorQR, setSelectedVisitorQR] = useState(null);
@@ -86,8 +88,8 @@ const VisitorList = () => {
           </button>
         </div>
 
-        <div className="overflow-visible pb-32">
-          <table className="w-full text-left border-collapse">
+        <div className="overflow-x-auto min-h-[400px] w-full">
+          <table className="w-full text-left border-collapse min-w-[800px]">
             <thead>
               <tr className="bg-slate-50 text-gray-500 text-xs uppercase tracking-wider">
                 <th className="px-6 py-4 font-medium">Visitor</th>
@@ -354,7 +356,7 @@ const VisitorList = () => {
                     setSelectedVisitorUpdateZone(null);
                     setSelectedZone('');
                   } else {
-                    alert('Please select a zone');
+                    addNotification('Action Required', 'Please select a zone first.', 'warning');
                   }
                 }}
                 className="w-full mt-4 bg-[var(--color-brand-indigo)] hover:bg-[var(--color-brand-indigo-light)] text-white font-medium py-3 rounded-lg shadow-md transition-colors"

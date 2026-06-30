@@ -38,7 +38,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   return (
     <aside className={`w-64 bg-[var(--color-brand-indigo)] text-white h-screen fixed top-0 left-0 flex flex-col shadow-xl z-20 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 shrink-0">
-        <h1 className="text-2xl font-bold tracking-wider">ZMVMS</h1>
+        <h1 className="text-2xl font-bold tracking-wider">FIC VMS</h1>
         <button 
           className="md:hidden text-white/70 hover:text-white"
           onClick={() => setIsOpen(false)}
@@ -83,7 +83,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
       </div>
       
       <div className="pb-4 text-xs text-indigo-200 text-center">
-        &copy; 2026 ZMVMS Portal
+        &copy; 2026 FIC VMS Portal
       </div>
     </aside>
   );

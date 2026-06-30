@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useVisitors } from '../../context/VisitorContext';
 import { useBlacklist } from '../../context/BlacklistContext';
+import { useNotification } from '../../context/NotificationContext';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Save, Upload, User, Calendar, FileText, Camera, IdCard, Info, Search, AlertCircle, QrCode, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
@@ -9,6 +10,7 @@ import Webcam from 'react-webcam';
 const VisitorForm = () => {
   const { addVisitor, allVisitors, networkIp } = useVisitors();
   const { isBlacklisted } = useBlacklist();
+  const { addNotification } = useNotification();
   const navigate = useNavigate();
   
   const [hosts, setHosts] = useState([
@@ -88,7 +90,7 @@ const VisitorForm = () => {
       setFormData(prev => ({ ...prev, photoUrl: result.url }));
     } catch (error) {
       console.error('Error uploading photo:', error);
-      alert('Failed to upload photo. Please try again.');
+      addNotification('Upload Failed', 'Failed to upload photo. Please try again.', 'error');
     } finally {
       setUploading(false);
     }
@@ -117,11 +119,11 @@ const VisitorForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (uploading) {
-      alert("Please wait for the photo to finish uploading.");
+      addNotification('Action Required', 'Please wait for the photo to finish uploading.', 'warning');
       return;
     }
     if (isBlacklisted(formData.mobileNumber)) {
-      alert("Registration Blocked: This mobile number is on the Blacklist.");
+      addNotification('Registration Blocked', 'This mobile number is on the Blacklist.', 'error');
       return;
     }
     addVisitor(formData);

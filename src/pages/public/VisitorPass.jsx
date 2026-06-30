@@ -122,7 +122,7 @@ const VisitorPass = () => {
         
         {/* Header */}
         <div className="text-center mb-6">
-          <h1 className="text-3xl font-black text-[var(--color-brand-indigo)] tracking-tight">ZMVMS</h1>
+          <h1 className="text-3xl font-black text-[var(--color-brand-indigo)] tracking-tight">FIC VMS</h1>
           <p className="mt-1 text-sm font-medium text-gray-500 uppercase tracking-widest">Digital Visitor Pass</p>
         </div>
 
