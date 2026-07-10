@@ -35,14 +35,30 @@ const AdminDashboard = () => {
   const branchCount = branches.length;
 
   // Visitor Trends Data
+  const trendsDataMap = { Mon: 0, Tue: 0, Wed: 0, Thu: 0, Fri: 0, Sat: 0, Sun: 0 };
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  sevenDaysAgo.setHours(0, 0, 0, 0);
+
+  visitors.forEach(v => {
+    if (!v.visitDate) return;
+    const visitDate = new Date(v.visitDate);
+    if (visitDate >= sevenDaysAgo) {
+      const dayName = visitDate.toLocaleDateString('en-US', { weekday: 'short' });
+      if (trendsDataMap[dayName] !== undefined) {
+        trendsDataMap[dayName]++;
+      }
+    }
+  });
+
   const trendsData = [
-    { day: 'Mon', visitors: 0 },
-    { day: 'Tue', visitors: 0 },
-    { day: 'Wed', visitors: 0 },
-    { day: 'Thu', visitors: 0 },
-    { day: 'Fri', visitors: 0 },
-    { day: 'Sat', visitors: 0 },
-    { day: 'Sun', visitors: 0 },
+    { day: 'Mon', visitors: trendsDataMap.Mon },
+    { day: 'Tue', visitors: trendsDataMap.Tue },
+    { day: 'Wed', visitors: trendsDataMap.Wed },
+    { day: 'Thu', visitors: trendsDataMap.Thu },
+    { day: 'Fri', visitors: trendsDataMap.Fri },
+    { day: 'Sat', visitors: trendsDataMap.Sat },
+    { day: 'Sun', visitors: trendsDataMap.Sun },
   ];
   const maxTrend = Math.max(...trendsData.map(d => d.visitors), 1);
 
