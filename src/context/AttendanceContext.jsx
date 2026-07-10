@@ -49,6 +49,8 @@ export const AttendanceProvider = ({ children }) => {
 
   useEffect(() => {
     fetchAttendance();
+    const interval = setInterval(fetchAttendance, 10000);
+    return () => clearInterval(interval);
   }, [user, activeBranch]);
 
   const formatTime = (dateObj) => {

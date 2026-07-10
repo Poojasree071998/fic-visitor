@@ -13,7 +13,7 @@ export const BlacklistProvider = ({ children }) => {
 
   const fetchBlacklist = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(API_URL, { cache: 'no-store' });
       if (response.ok) {
         const data = await response.json();
         setBlacklisted(data);
@@ -27,6 +27,8 @@ export const BlacklistProvider = ({ children }) => {
 
   React.useEffect(() => {
     fetchBlacklist();
+    const interval = setInterval(fetchBlacklist, 10000); // Auto-refresh every 10 seconds
+    return () => clearInterval(interval);
   }, []);
 
   const blacklisted = React.useMemo(() => {
