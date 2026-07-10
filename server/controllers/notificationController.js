@@ -5,14 +5,15 @@ exports.getNotifications = async (req, res) => {
     let query = {};
     if (req.query.branch) {
       const branchUpper = req.query.branch.toUpperCase();
-      let searchRegexStr = req.query.branch;
+      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let searchRegexStr = escapeRegExp(req.query.branch);
       
       if (branchUpper.includes('THIRUPATTUR')) {
-        searchRegexStr = `${req.query.branch}|Tirupattur`;
+        searchRegexStr = `${searchRegexStr}|Tirupattur`;
       } else if (branchUpper.includes('KRISHNAGIRI')) {
-        searchRegexStr = `${req.query.branch}|Salem`;
+        searchRegexStr = `${searchRegexStr}|Salem`;
       } else if (branchUpper === 'BANGALORE') {
-        searchRegexStr = `${req.query.branch}|Bangalore`;
+        searchRegexStr = `${searchRegexStr}|Bangalore`;
       }
       
       query.branch = { $regex: new RegExp(`^(${searchRegexStr})$`, 'i') };

@@ -38,14 +38,17 @@ router.get('/', async (req, res) => {
     if (req.query.branch) {
       const branchUpper = req.query.branch.toUpperCase();
       
+      // Escape special characters in the branch name for regex
+      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let searchRegexStr = escapeRegExp(req.query.branch);
+      
       // Map new branch names to legacy test data
-      let searchRegexStr = req.query.branch;
       if (branchUpper.includes('THIRUPATTUR')) {
-        searchRegexStr = `${req.query.branch}|Tirupattur`;
+        searchRegexStr = `${searchRegexStr}|Tirupattur`;
       } else if (branchUpper.includes('KRISHNAGIRI')) {
-        searchRegexStr = `${req.query.branch}|Salem`;
+        searchRegexStr = `${searchRegexStr}|Salem`;
       } else if (branchUpper === 'BANGALORE') {
-        searchRegexStr = `${req.query.branch}|Bangalore`;
+        searchRegexStr = `${searchRegexStr}|Bangalore`;
       }
       
       query.branch = { $regex: new RegExp(`^(${searchRegexStr})$`, 'i') };

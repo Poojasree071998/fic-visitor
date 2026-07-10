@@ -41,21 +41,17 @@ const UserList = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch(API_URL);
+      let fetchUrl = API_URL;
+      if (currentUser && !['Super Admin'].includes(currentUser.role)) {
+        fetchUrl = `${API_URL}?branch=${encodeURIComponent(currentUser.branch)}`;
+      } else if (activeBranch && activeBranch !== 'All Branches') {
+        fetchUrl = `${API_URL}?branch=${encodeURIComponent(activeBranch)}`;
+      }
+
+      const response = await fetch(fetchUrl);
       if (response.ok) {
         const data = await response.json();
-        
-        // Super Admin can see all users, filtered by activeBranch dropdown.
-        // Admin, MD, and Security can only see users from their own branch.
-        if (currentUser && !['Super Admin'].includes(currentUser.role)) {
-          const branchUsers = data.filter(u => u.branch === currentUser.branch);
-          setUsers(branchUsers);
-        } else if (activeBranch && activeBranch !== 'All Branches') {
-          const filteredUsers = data.filter(u => u.branch === activeBranch);
-          setUsers(filteredUsers);
-        } else {
-          setUsers(data);
-        }
+        setUsers(data);
       }
     } catch (err) {
       console.error('Failed to fetch users:', err);

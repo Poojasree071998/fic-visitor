@@ -32,7 +32,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
         ? `${API_URL}?branch=${encodeURIComponent(queryBranch)}` 
         : API_URL;
       
-      const res = await fetch(fetchUrl);
+      const res = await fetch(fetchUrl, { cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
         const normalizedRole = getNormalizedRole(user?.role);

@@ -40,7 +40,11 @@ router.get('/fix-branches', async (req, res) => {
 // GET all users
 router.get('/', async (req, res) => {
   try {
-    const users = await User.find().sort({ createdAt: -1 });
+    let query = {};
+    if (req.query.branch) {
+      query.branch = req.query.branch;
+    }
+    const users = await User.find(query).sort({ createdAt: -1 });
     // Remove passwords before sending to frontend
     const sanitizedUsers = users.map(user => {
       const u = user.toJSON();
@@ -76,13 +80,19 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ message: 'Email already exists' });
     }
 
+    // Force branch if creator role is passed and not Super Admin
+    let userBranch = req.body.branch;
+    if (req.body.createdByRole && req.body.createdByRole !== 'Super Admin') {
+      userBranch = req.body.creatorBranch || req.body.branch;
+    }
+
     const user = new User({
       name: req.body.name,
       email: req.body.email,
       mobileNumber: req.body.mobileNumber,
       password: req.body.password, // Plain text as requested for testing
       role: req.body.role,
-      branch: req.body.branch,
+      branch: userBranch,
       status: req.body.status || 'Active',
       createdBy: req.body.createdBy
     });

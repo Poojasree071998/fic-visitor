@@ -35,11 +35,19 @@ const UserForm = () => {
     setLoading(true);
     setError(null);
 
+    // FIX: Force branch if not super admin to avoid saving in 'All Branches'
+    const submissionData = { ...formData };
+    if (!['Super Admin'].includes(currentUser?.role)) {
+      submissionData.branch = currentUser.branch;
+    }
+    submissionData.createdByRole = currentUser?.role;
+    submissionData.creatorBranch = currentUser?.branch;
+
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData)
+        body: JSON.stringify(submissionData)
       });
 
       if (response.ok) {
