@@ -20,7 +20,6 @@ const ReportsDashboard = () => {
     : allVisitors;
 
   const [activeTab, setActiveTab] = useState('visitor');
-  const [selectedZone, setSelectedZone] = useState(null);
 
   // User-Friendly Excel (.xls) Exporter
   const exportExcel = (data, filename) => {
@@ -79,33 +78,7 @@ const ReportsDashboard = () => {
     };
   });
 
-  // 2. Zone Report Data
-  const zoneReportData = zones.map(z => {
-    const visitorsInZone = filteredVisitors.filter(v => v.currentZone === z.name && v.status === 'Inside').length;
-    
-    // Calculate Average Time
-    let totalMinutes = 0;
-    let logCount = 0;
-
-    filteredVisitors.forEach(v => {
-      if (v.zoneLogs && v.zoneLogs.length > 0) {
-        v.zoneLogs.forEach(log => {
-          if (log.zoneName === z.name && log.durationMinutes !== undefined && log.durationMinutes !== null) {
-            totalMinutes += log.durationMinutes;
-            logCount += 1;
-          }
-        });
-      }
-    });
-
-    const averageTime = logCount > 0 ? `${Math.round(totalMinutes / logCount)} Min` : 'N/A';
-
-    return {
-      "Zone": z.name,
-      "Visitors": visitorsInZone,
-      "Average Time": averageTime
-    };
-  });
+  // Zone Report Data removed per request
 
   // 3. Branch Report Data
   const uniqueBranches = [...new Set(filteredVisitors.map(v => v.branch).filter(Boolean))];
@@ -152,7 +125,6 @@ const ReportsDashboard = () => {
   const getActiveData = () => {
     switch (activeTab) {
       case 'visitor': return visitorReportData;
-      case 'zone': return zoneReportData;
       case 'branch': return branchReportData;
       default: return [];
     }
@@ -210,12 +182,6 @@ const ReportsDashboard = () => {
             <ShieldCheck size={16}/> Security Report
           </button>
           <button 
-            onClick={() => setActiveTab('zone')}
-            className={`px-6 py-4 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 whitespace-nowrap ${activeTab === 'zone' ? 'border-[var(--color-brand-indigo)] text-[var(--color-brand-indigo)]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-          >
-            <Map size={16}/> Zone Report
-          </button>
-          <button 
             onClick={() => setActiveTab('branch')}
             className={`px-6 py-4 font-medium text-sm flex items-center gap-2 transition-colors border-b-2 whitespace-nowrap ${activeTab === 'branch' ? 'border-[var(--color-brand-indigo)] text-[var(--color-brand-indigo)]' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
           >
@@ -251,48 +217,6 @@ const ReportsDashboard = () => {
           </div>
         )}
 
-        {activeTab === 'zone' && (
-          <div className="p-6 sm:p-8 bg-slate-50/50">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {zoneReportData.map((z, i) => (
-                <div key={i} className="bg-white rounded-xl border border-gray-100 shadow-sm p-6 hover:shadow-md transition-shadow relative overflow-hidden group">
-                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
-                    <Map size={80} className="text-[var(--color-brand-indigo)]" />
-                  </div>
-                  <h3 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <div className="p-2 bg-indigo-50 rounded-lg text-[var(--color-brand-indigo)]">
-                      <Map size={18} />
-                    </div>
-                    {z.Zone}
-                  </h3>
-                  <div className="space-y-4 relative z-10">
-                    <div className="flex justify-between items-end border-b border-gray-50 pb-4">
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Currently Inside</p>
-                        <p className="text-3xl font-black text-gray-900 leading-none">{z.Visitors}</p>
-                      </div>
-                      <button 
-                        onClick={() => setSelectedZone(z.Zone)}
-                        className="w-10 h-10 rounded-full bg-indigo-50 flex items-center justify-center text-[var(--color-brand-indigo)] border border-indigo-100 hover:bg-indigo-100 hover:scale-105 transition-all shadow-sm"
-                        title="View visitors in this zone"
-                      >
-                        <Users size={18}/>
-                      </button>
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">Average Duration</p>
-                      <div className="flex items-center gap-2 bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                        <Clock size={16} className={z["Average Time"] === 'N/A' ? 'text-gray-400' : 'text-orange-500'}/>
-                        <span className="text-sm font-bold text-gray-700">{z["Average Time"]}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {activeTab === 'branch' && (
           <div className="p-0">
             {renderTable(branchReportData)}
@@ -305,51 +229,6 @@ const ReportsDashboard = () => {
           </div>
         )}
       </div>
-
-      {/* Zone Details Modal */}
-      {selectedZone && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-200">
-            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-slate-50">
-              <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
-                <Map size={20} className="text-[var(--color-brand-indigo)]"/> 
-                Visitors currently in {selectedZone}
-              </h3>
-              <button onClick={() => setSelectedZone(null)} className="text-gray-400 hover:text-gray-600 transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="p-6 max-h-[60vh] overflow-y-auto">
-              {filteredVisitors.filter(v => v.currentZone === selectedZone && v.status === 'Inside').length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No visitors currently in this zone.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {filteredVisitors.filter(v => v.currentZone === selectedZone && v.status === 'Inside').map(visitor => (
-                    <div key={visitor.id} className="flex items-center justify-between p-4 rounded-lg border border-gray-100 bg-white shadow-sm hover:border-indigo-100 transition-colors">
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-full bg-indigo-50 text-[var(--color-brand-indigo)] flex items-center justify-center font-bold">
-                          {visitor.visitorName.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="font-bold text-gray-900">{visitor.visitorName}</p>
-                          <p className="text-xs text-gray-500">{visitor.companyName || 'Independent'} • Host: {visitor.hostName}</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs font-bold text-gray-400 uppercase">Entered At</p>
-                        <p className="text-sm font-semibold text-gray-700">{visitor.entryTime || 'N/A'}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
     </div>
   );
 };

@@ -5,9 +5,14 @@ import { useZones } from '../../context/ZoneContext';
 import { Users, UserCheck, Clock, Ban, Building, MapPin, ShieldAlert, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import TodaysVisitorsCard from '../../components/dashboard/TodaysVisitorsCard';
+import VisitorStatusSummaryCard from '../../components/dashboard/VisitorStatusSummaryCard';
 
-const DashboardCard = ({ title, value, icon: Icon, colorClass }) => (
-  <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300">
+const DashboardCard = ({ title, value, icon: Icon, colorClass, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300 ${onClick ? 'cursor-pointer' : ''}`}
+  >
     <div className={`w-14 h-14 rounded-full flex items-center justify-center ${colorClass}`}>
       <Icon size={24} />
     </div>
@@ -166,11 +171,11 @@ const SuperAdminDashboard = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <DashboardCard title="Total Visitors" value={totalVisitors} icon={Users} colorClass="bg-blue-100 text-blue-600" />
-        <DashboardCard title="Visitors Inside" value={insideVisitors.length} icon={UserCheck} colorClass="bg-green-100 text-green-600" />
-        <DashboardCard title="Pending Approvals" value={pendingApprovals} icon={Clock} colorClass="bg-orange-100 text-orange-600" />
-        <DashboardCard title="Blocked Visitors" value={blockedVisitors} icon={Ban} colorClass="bg-red-100 text-red-600" />
-        <DashboardCard title="Total Branches" value={totalBranches} icon={Building} colorClass="bg-purple-100 text-purple-600" />
+        <DashboardCard onClick={() => navigate('/visitors')} title="Total Visitors" value={totalVisitors} icon={Users} colorClass="bg-blue-100 text-blue-600" />
+        <DashboardCard onClick={() => navigate('/tracking')} title="Visitors Inside" value={insideVisitors.length} icon={UserCheck} colorClass="bg-green-100 text-green-600" />
+        <DashboardCard onClick={() => navigate('/approvals')} title="Pending Approvals" value={pendingApprovals} icon={Clock} colorClass="bg-orange-100 text-orange-600" />
+        <DashboardCard onClick={() => navigate('/blacklist')} title="Blocked Visitors" value={blockedVisitors} icon={Ban} colorClass="bg-red-100 text-red-600" />
+        <DashboardCard onClick={() => navigate('/settings')} title="Total Branches" value={totalBranches} icon={Building} colorClass="bg-purple-100 text-purple-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
@@ -188,9 +193,11 @@ const SuperAdminDashboard = () => {
               <thead>
                 <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
                   <th className="px-6 py-4 font-medium">Visitor Name</th>
+                  <th className="px-6 py-4 font-medium text-center">Group Size</th>
                   <th className="px-6 py-4 font-medium">Host</th>
                   <th className="px-6 py-4 font-medium">Entry Time</th>
                   <th className="px-6 py-4 font-medium">Exit Time</th>
+                  <th className="px-6 py-4 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -199,9 +206,27 @@ const SuperAdminDashboard = () => {
                   return (
                     <tr key={visitor.id} className={`transition-colors ${restricted ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50/50'}`}>
                       <td className="px-6 py-4 font-medium text-gray-900">{visitor.visitorName}</td>
+                      <td className="px-6 py-4 font-bold text-gray-700 text-center">{visitor.visitorCount || 1}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{visitor.hostName}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600 font-mono">{visitor.entryTime || '-'}</td>
+                      <td className="px-6 py-4">
+                        <div className="text-sm font-medium text-gray-900">{visitor.entryTime || '-'}</div>
+                        <div className="text-xs text-gray-500">{visitor.visitDate || '-'}</div>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-600 font-mono">{visitor.exitTime || '-'}</td>
+                      <td className="px-6 py-4">
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
+                          visitor.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
+                          visitor.status === 'Pending' ? 'bg-orange-100 text-orange-700' :
+                          visitor.status === 'Rejected' ? 'bg-red-100 text-red-700' :
+                          visitor.status === 'Inside' ? 'bg-yellow-100 text-yellow-700' :
+                          visitor.status === 'Exited' ? 'bg-green-100 text-green-700' :
+                          'bg-gray-100 text-gray-700'
+                        }`}>
+                          {visitor.status === 'Inside' ? '🟡 In Progress' : 
+                           visitor.status === 'Exited' ? '🟢 Completed' : 
+                           visitor.status}
+                        </span>
+                      </td>
                     </tr>
                   );
                 })}
@@ -234,6 +259,9 @@ const SuperAdminDashboard = () => {
               </button>
             </div>
           </div>
+          
+          <TodaysVisitorsCard />
+          <VisitorStatusSummaryCard />
         </div>
       </div>
 

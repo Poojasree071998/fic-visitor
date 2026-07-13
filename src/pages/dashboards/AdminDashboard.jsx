@@ -5,9 +5,16 @@ import { useZones } from '../../context/ZoneContext';
 import { useAuth } from '../../context/AuthContext';
 import { Users, Clock, Building, ShieldAlert, AlertTriangle } from 'lucide-react';
 import { calculateTimeSpent } from '../../utils/timeUtils';
+import TodaysVisitorsCard from '../../components/dashboard/TodaysVisitorsCard';
+import VisitorStatusSummaryCard from '../../components/dashboard/VisitorStatusSummaryCard';
 
-const DashboardCard = ({ title, value, icon: Icon, colorClass }) => (
-  <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300">
+import { useNavigate } from 'react-router-dom';
+
+const DashboardCard = ({ title, value, icon: Icon, colorClass, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300 ${onClick ? 'cursor-pointer' : ''}`}
+  >
     <div className={`w-14 h-14 rounded-full flex items-center justify-center ${colorClass}`}>
       <Icon size={24} />
     </div>
@@ -19,6 +26,7 @@ const DashboardCard = ({ title, value, icon: Icon, colorClass }) => (
 );
 
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const { visitors, updateVisitorStatus } = useVisitors();
   const { branches } = useBranch();
   const { zones } = useZones();
@@ -130,14 +138,14 @@ const AdminDashboard = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <DashboardCard title="Visitors Today" value={visitorsToday} icon={Users} colorClass="bg-blue-100 text-blue-600" />
-        <DashboardCard title="Pending Approvals" value={pendingApprovals} icon={Clock} colorClass="bg-orange-100 text-orange-600" />
-        <DashboardCard title="Security Alerts" value={securityAlerts} icon={ShieldAlert} colorClass="bg-red-100 text-red-600" />
-        <DashboardCard title="Zone Violations" value={zoneViolations} icon={AlertTriangle} colorClass="bg-yellow-100 text-yellow-600" />
-        <DashboardCard title="Branch Statistics" value={branchCount} icon={Building} colorClass="bg-purple-100 text-purple-600" />
+        <DashboardCard onClick={() => navigate('/visitors')} title="Visitors Today" value={visitorsToday} icon={Users} colorClass="bg-blue-100 text-blue-600" />
+        <DashboardCard onClick={() => navigate('/approvals')} title="Pending Approvals" value={pendingApprovals} icon={Clock} colorClass="bg-orange-100 text-orange-600" />
+        <DashboardCard onClick={() => navigate('/tracking')} title="Security Alerts" value={securityAlerts} icon={ShieldAlert} colorClass="bg-red-100 text-red-600" />
+        <DashboardCard onClick={() => navigate('/tracking')} title="Zone Violations" value={zoneViolations} icon={AlertTriangle} colorClass="bg-yellow-100 text-yellow-600" />
+        <DashboardCard onClick={() => navigate('/reports')} title="Branch Statistics" value={branchCount} icon={Building} colorClass="bg-purple-100 text-purple-600" />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
         
         {/* Visitor Trends Chart */}
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6">
@@ -180,6 +188,10 @@ const AdminDashboard = () => {
           </div>
         </div>
 
+        <div className="space-y-6">
+          <TodaysVisitorsCard />
+          <VisitorStatusSummaryCard />
+        </div>
       </div>
 
       <div className="mt-8 bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden flex flex-col">
@@ -194,6 +206,7 @@ const AdminDashboard = () => {
             <thead>
               <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
                 <th className="px-6 py-4 font-medium">Visitor Name</th>
+                <th className="px-6 py-4 font-medium text-center">Group Size</th>
                 <th className="px-6 py-4 font-medium">Entry Time</th>
                 <th className="px-6 py-4 font-medium">Exit Time</th>
                 <th className="px-6 py-4 font-medium">Time Spent</th>
@@ -204,7 +217,11 @@ const AdminDashboard = () => {
               {[...visitors].reverse().slice(0, 10).map((visitor) => (
                 <tr key={visitor.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{visitor.visitorName}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{visitor.entryTime || '-'}</td>
+                  <td className="px-6 py-4 font-bold text-gray-700 text-center">{visitor.visitorCount || 1}</td>
+                  <td className="px-6 py-4">
+                    <div className="text-sm font-medium text-gray-900">{visitor.entryTime || '-'}</div>
+                    <div className="text-xs text-gray-500">{visitor.visitDate || '-'}</div>
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-600">{visitor.exitTime || '-'}</td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-800">{calculateTimeSpent(visitor.visitDate, visitor.entryTime, visitor.exitTime, visitor.status)}</td>
                   <td className="px-6 py-4">
@@ -212,10 +229,13 @@ const AdminDashboard = () => {
                       visitor.status === 'Approved' ? 'bg-blue-100 text-blue-700' :
                       visitor.status === 'Pending' ? 'bg-orange-100 text-orange-700' :
                       visitor.status === 'Rejected' ? 'bg-red-100 text-red-700' :
-                      visitor.status === 'Inside' ? 'bg-indigo-100 text-[var(--color-brand-indigo)]' :
+                      visitor.status === 'Inside' ? 'bg-yellow-100 text-yellow-700' :
+                      visitor.status === 'Exited' ? 'bg-green-100 text-green-700' :
                       'bg-gray-100 text-gray-700'
                     }`}>
-                      {visitor.status}
+                      {visitor.status === 'Inside' ? '🟡 In Progress' : 
+                       visitor.status === 'Exited' ? '🟢 Completed' : 
+                       visitor.status}
                     </span>
                   </td>
                 </tr>

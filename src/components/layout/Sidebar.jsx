@@ -22,7 +22,6 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
 
   const allNavItems = [
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security', 'Visitor'] },
-    { name: 'Today\'s Visitors', path: '/todays-visitors', icon: <Activity size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security'] },
     { name: 'All Visitors', path: '/visitors', icon: <Users size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security'] },
     { name: 'User Management', path: '/users', icon: <Shield size={20} />, roles: ['Super Admin'] },
     { name: 'Approvals', path: '/approvals', icon: <CheckSquare size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },

@@ -560,7 +560,7 @@ const VisitorForm = () => {
             
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm inline-block mb-6">
               <QRCodeSVG 
-                value={`${window.location.origin}/pass/${existingVisitorMatch.visitId || existingVisitorMatch.id}`} 
+                value={`http://${import.meta.env.VITE_NETWORK_IP}:${window.location.port}/pass/${existingVisitorMatch.visitId || existingVisitorMatch.id}`} 
                 size={200}
                 level="H"
                 includeMargin={true}

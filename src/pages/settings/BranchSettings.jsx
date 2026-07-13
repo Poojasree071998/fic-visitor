@@ -16,7 +16,7 @@ const BranchSettings = () => {
     latitude: '',
     longitude: '',
     radius: 50,
-    checkInStart: '09:00',
+    checkInStart: '08:30',
     checkInEnd: '09:30',
     checkOutTime: '20:00'
   });
@@ -37,7 +37,7 @@ const BranchSettings = () => {
           latitude: data.latitude || '',
           longitude: data.longitude || '',
           radius: data.radius || 50,
-          checkInStart: data.checkInStart || '09:00',
+          checkInStart: data.checkInStart || '08:30',
           checkInEnd: data.checkInEnd || '09:30',
           checkOutTime: data.checkOutTime || '20:00'
         });
@@ -47,7 +47,7 @@ const BranchSettings = () => {
           latitude: '',
           longitude: '',
           radius: 50,
-          checkInStart: '09:00',
+          checkInStart: '08:30',
           checkInEnd: '09:30',
           checkOutTime: '20:00'
         });

@@ -7,9 +7,14 @@ import Webcam from 'react-webcam';
 import { useNavigate } from 'react-router-dom';
 import { calculateTimeSpent } from '../../utils/timeUtils';
 import { useAttendance } from '../../context/AttendanceContext';
+import TodaysVisitorsCard from '../../components/dashboard/TodaysVisitorsCard';
+import VisitorStatusSummaryCard from '../../components/dashboard/VisitorStatusSummaryCard';
 
-const DashboardCard = ({ title, value, icon: Icon, colorClass }) => (
-  <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300">
+const DashboardCard = ({ title, value, icon: Icon, colorClass, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300 ${onClick ? 'cursor-pointer' : ''}`}
+  >
     <div className={`w-14 h-14 rounded-full flex items-center justify-center ${colorClass}`}>
       <Icon size={24} />
     </div>
@@ -45,7 +50,7 @@ const SecurityDashboard = () => {
         latitude: 12.5269722,
         longitude: 78.2025000,
         radius: 50,
-        checkInStart: '09:00',
+        checkInStart: '08:30',
         checkInEnd: '09:30',
         checkOutTime: '20:00'
       };
@@ -138,7 +143,7 @@ const SecurityDashboard = () => {
   const today = new Date().toISOString().split('T')[0];
   const todaysVisitors = visitors.filter(v => v.visitDate === today).length;
   const visitorsInside = visitors.filter(v => v.status === 'Inside');
-  const qrScans = 0; // Simulated
+  const qrScans = visitors.filter(v => v.visitDate === today && (v.status === 'Inside' || v.status === 'Exited')).length;
   const blockedAttempts = visitors.filter(v => v.status === 'Rejected').length; // Treating rejected as blocked for security proxy
   const securityAlerts = 0; // Simulated
 
@@ -171,15 +176,14 @@ const SecurityDashboard = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-        <DashboardCard title="Today's Visitors" value={todaysVisitors} icon={Users} colorClass="bg-blue-100 text-blue-600" />
-        <DashboardCard title="Visitors Inside" value={visitorsInside.length} icon={UserCheck} colorClass="bg-green-100 text-green-600" />
-        <DashboardCard title="QR Scans" value={qrScans} icon={QrCode} colorClass="bg-purple-100 text-purple-600" />
-        <DashboardCard title="Security Alerts" value={securityAlerts} icon={ShieldAlert} colorClass="bg-red-100 text-red-600" />
-        <DashboardCard title="Blocked Attempts" value={blockedAttempts} icon={Ban} colorClass="bg-orange-100 text-orange-600" />
+        <DashboardCard onClick={() => navigate('/visitors')} title="Today's Visitors" value={todaysVisitors} icon={Users} colorClass="bg-blue-100 text-blue-600" />
+        <DashboardCard onClick={() => navigate('/tracking')} title="Visitors Inside" value={visitorsInside.length} icon={UserCheck} colorClass="bg-green-100 text-green-600" />
+        <DashboardCard onClick={() => navigate('/visitors?filter=checked-in')} title="QR Scans" value={qrScans} icon={QrCode} colorClass="bg-purple-100 text-purple-600" />
+        <DashboardCard onClick={() => navigate('/tracking')} title="Security Alerts" value={securityAlerts} icon={ShieldAlert} colorClass="bg-red-100 text-red-600" />
+        <DashboardCard onClick={() => navigate('/blacklist')} title="Blocked Attempts" value={blockedAttempts} icon={Ban} colorClass="bg-orange-100 text-orange-600" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-        
         {/* Left Column: Attendance, Quick Verification, Security Tools */}
         <div className="lg:col-span-1 space-y-6">
           
@@ -355,6 +359,9 @@ const SecurityDashboard = () => {
                </button>
              </div>
           </div>
+
+          <TodaysVisitorsCard />
+          <VisitorStatusSummaryCard />
         </div>
 
         {/* Expected Arrivals Feed */}
@@ -378,6 +385,7 @@ const SecurityDashboard = () => {
                 <tr className="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b border-gray-200">
                   <th className="px-6 py-4 font-medium">Visitor</th>
                   <th className="px-6 py-4 font-medium">Host / Purpose</th>
+                  <th className="px-6 py-4 font-medium text-center">Group Size</th>
                   <th className="px-6 py-4 font-medium">Entry Time</th>
                   <th className="px-6 py-4 font-medium">Exit Time</th>
                   <th className="px-6 py-4 font-medium">Time Spent</th>
@@ -395,8 +403,12 @@ const SecurityDashboard = () => {
                       <div className="font-medium text-gray-900">{visitor.hostName || '-'}</div>
                       <div className="text-xs text-gray-500">{visitor.purpose || '-'}</div>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">
-                      {visitor.entryTime || '-'}
+                    <td className="px-6 py-4 text-center font-bold text-gray-700">
+                      {visitor.visitorCount || 1}
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="text-sm font-medium text-gray-900">{visitor.entryTime || '-'}</div>
+                      <div className="text-xs text-gray-500">{visitor.visitDate || '-'}</div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">
                       {visitor.exitTime || '-'}
@@ -408,11 +420,13 @@ const SecurityDashboard = () => {
                       <span className={`px-2 py-1 rounded text-xs font-medium flex items-center justify-end gap-1 ${
                         visitor.status === 'Approved' ? 'bg-green-50 text-green-600' :
                         visitor.status === 'Rejected' ? 'bg-red-50 text-red-600' :
-                        visitor.status === 'Inside' ? 'bg-indigo-50 text-[var(--color-brand-indigo)]' :
-                        visitor.status === 'Exited' ? 'bg-gray-100 text-gray-600' :
+                        visitor.status === 'Inside' ? 'bg-yellow-50 text-yellow-600' :
+                        visitor.status === 'Exited' ? 'bg-green-50 text-green-700' :
                         'bg-orange-50 text-orange-600'
                       }`}>
-                        {visitor.status} 
+                        {visitor.status === 'Inside' ? '🟡 In Progress' : 
+                         visitor.status === 'Exited' ? '🟢 Completed' : 
+                         visitor.status} 
                         {visitor.status === 'Approved' && '✅'}
                         {visitor.status === 'Pending' && '⏳'}
                         {visitor.status === 'Rejected' && '❌'}

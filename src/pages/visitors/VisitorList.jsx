@@ -4,7 +4,7 @@ import { useZones } from '../../context/ZoneContext';
 import { useBranch } from '../../context/BranchContext';
 import { useNotification } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Plus, Search, Filter, MoreVertical, QrCode, X, FileText, Edit, Save } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -23,8 +23,18 @@ const VisitorList = () => {
   const [selectedZone, setSelectedZone] = useState('');
   const [openDropdownId, setOpenDropdownId] = useState(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const location = useLocation();
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('');
+
+  // Handle URL params for filtering
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('filter') === 'checked-in') {
+      setStatusFilter('Checked In');
+      setDateFilter(new Date().toISOString().split('T')[0]);
+    }
+  }, [location]);
 
   // Close dropdown when clicking outside
   React.useEffect(() => {
@@ -38,8 +48,8 @@ const VisitorList = () => {
       case 'Pending': return 'bg-orange-100 text-orange-700';
       case 'Approved': return 'bg-blue-100 text-blue-700';
       case 'Rejected': return 'bg-red-100 text-red-700';
-      case 'Inside': return 'bg-green-100 text-green-700';
-      case 'Exited': return 'bg-gray-100 text-gray-700';
+      case 'Inside': return 'bg-yellow-100 text-yellow-700';
+      case 'Exited': return 'bg-green-100 text-green-700';
       default: return 'bg-gray-100 text-gray-700';
     }
   };
@@ -47,7 +57,8 @@ const VisitorList = () => {
   const filteredVisitors = visitors.filter(v => {
     const matchesSearch = (v.visitorName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
                           (v.companyName || '').toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || v.status === statusFilter;
+    const matchesStatus = statusFilter === 'All' || 
+                          (statusFilter === 'Checked In' ? (v.status === 'Inside' || v.status === 'Exited') : v.status === statusFilter);
     const matchesDate = !dateFilter || v.visitDate === dateFilter;
     return matchesSearch && matchesStatus && matchesDate;
   });
@@ -120,7 +131,7 @@ const VisitorList = () => {
             {isFilterOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-gray-200 z-50 overflow-hidden">
                 <div className="p-2 space-y-1">
-                  {['All', 'Pending', 'Approved', 'Inside', 'Exited', 'Rejected'].map((status) => (
+                  {['All', 'Pending', 'Approved', 'Checked In', 'Inside', 'Exited', 'Rejected'].map((status) => (
                     <button
                       key={status}
                       onClick={() => {
@@ -129,7 +140,7 @@ const VisitorList = () => {
                       }}
                       className={`block w-full text-left px-4 py-2 text-sm rounded-lg transition-colors ${statusFilter === status ? 'bg-indigo-50 text-[var(--color-brand-indigo)] font-semibold' : 'text-gray-700 hover:bg-slate-50'}`}
                     >
-                      {status === 'All' ? 'All Statuses' : status}
+                      {status === 'All' ? 'All Statuses' : status === 'Checked In' ? 'QR Scans (Checked In)' : status}
                     </button>
                   ))}
                 </div>
@@ -197,7 +208,9 @@ const VisitorList = () => {
                   </td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(visitor.status)}`}>
-                      {visitor.status}
+                      {visitor.status === 'Inside' ? '🟡 In Progress' : 
+                       visitor.status === 'Exited' ? '🟢 Completed' : 
+                       visitor.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
@@ -277,7 +290,7 @@ const VisitorList = () => {
             
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm inline-block mb-6">
               <QRCodeSVG 
-                value={`${window.location.origin}/pass/${selectedVisitorQR.visitId || selectedVisitorQR.id}`} 
+                value={`http://${import.meta.env.VITE_NETWORK_IP}:${window.location.port}/pass/${selectedVisitorQR.visitId || selectedVisitorQR.id}`} 
                 size={200}
                 level="H"
                 includeMargin={true}

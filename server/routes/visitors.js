@@ -34,12 +34,14 @@ router.post('/upload', upload.single('photo'), (req, res) => {
 // Get today's summary (counts by team)
 router.get('/todays-summary', async (req, res) => {
   try {
-    const { branchId } = req.query;
+    const { branchId, date } = req.query;
 
-    const startOfDay = new Date();
+    const targetDate = date ? new Date(date) : new Date();
+    
+    const startOfDay = new Date(targetDate);
     startOfDay.setHours(0, 0, 0, 0);
 
-    const endOfDay = new Date();
+    const endOfDay = new Date(targetDate);
     endOfDay.setHours(23, 59, 59, 999);
 
     const matchStage = {
