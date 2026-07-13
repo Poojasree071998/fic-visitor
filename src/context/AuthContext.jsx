@@ -4,7 +4,7 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = sessionStorage.getItem('zmvms_user');
+    const saved = localStorage.getItem('zmvms_user');
     return saved ? JSON.parse(saved) : null;
   });
 
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }) => {
       if (response.ok) {
         const userData = await response.json();
         setUser(userData);
-        sessionStorage.setItem('zmvms_user', JSON.stringify(userData));
+        localStorage.setItem('zmvms_user', JSON.stringify(userData));
         return { success: true };
       }
       return { success: false, message: `Server responded with status: ${response.status}` };
@@ -34,7 +34,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     setUser(null);
-    sessionStorage.removeItem('zmvms_user');
+    localStorage.removeItem('zmvms_user');
   };
 
   return (
