@@ -31,6 +31,63 @@ router.post('/upload', upload.single('photo'), (req, res) => {
   }
 });
 
+// Get today's summary (counts by team)
+router.get('/todays-summary', async (req, res) => {
+  try {
+    const { branchId } = req.query;
+
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date();
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const matchStage = {
+      createdAt: {
+        $gte: startOfDay,
+        $lte: endOfDay,
+      }
+    };
+
+    if (branchId && branchId !== 'All Branches') {
+      const branchUpper = branchId.toUpperCase();
+      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let searchRegexStr = escapeRegExp(branchId);
+      
+      if (branchUpper.includes('THIRUPATTUR')) {
+        searchRegexStr = `${searchRegexStr}|Tirupattur`;
+      } else if (branchUpper.includes('KRISHNAGIRI')) {
+        searchRegexStr = `${searchRegexStr}|Salem`;
+      } else if (branchUpper === 'BANGALORE') {
+        searchRegexStr = `${searchRegexStr}|Bangalore`;
+      }
+      matchStage.branch = { $regex: new RegExp(`^(${searchRegexStr})$`, 'i') };
+    }
+
+    const totalVisitorsToday = await Visitor.countDocuments(matchStage);
+
+    const teamCounts = await Visitor.aggregate([
+      { $match: matchStage },
+      { 
+        $group: {
+          _id: "$hostTeam",
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { count: -1 } }
+    ]);
+
+    const teamBreakdown = teamCounts.map(t => ({
+      team: t._id || 'General',
+      count: t.count
+    }));
+
+    res.json({ totalVisitorsToday, teamBreakdown });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // Get all visitors
 router.get('/', async (req, res) => {
   try {

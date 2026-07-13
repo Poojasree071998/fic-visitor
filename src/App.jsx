@@ -16,6 +16,7 @@ import MainLayout from './components/layout/MainLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import VisitorList from './pages/visitors/VisitorList';
+import TodaysVisitors from './pages/visitors/TodaysVisitors';
 import VisitorForm from './pages/visitors/VisitorForm';
 import ReturningVisitor from './pages/visitors/ReturningVisitor';
 import VisitorPass from './pages/public/VisitorPass';
@@ -63,6 +64,7 @@ const AppRoutes = () => {
         <Route path="users/new" element={<ProtectedRoute allowedRoles={['Super Admin']}><UserForm /></ProtectedRoute>} />
         
         {/* Visitor Management */}
+        <Route path="todays-visitors" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security']}><TodaysVisitors /></ProtectedRoute>} />
         <Route path="visitors" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security']}><VisitorList /></ProtectedRoute>} />
         <Route path="visitors/new" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security']}><VisitorForm /></ProtectedRoute>} />
         <Route path="visitors/returning" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security']}><ReturningVisitor /></ProtectedRoute>} />

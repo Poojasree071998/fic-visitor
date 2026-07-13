@@ -128,7 +128,14 @@ const VisitorForm = () => {
       addNotification('Registration Blocked', 'This mobile number is on the Blacklist.', 'error');
       return;
     }
-    addVisitor(formData);
+    let hostTeam = 'General';
+    const match = formData.hostName.match(/\(([^)]+)\)/);
+    if (match && match[1]) {
+      hostTeam = match[1].trim();
+    }
+    
+    const finalData = { ...formData, hostTeam };
+    addVisitor(finalData);
     navigate('/visitors');
   };
 
