@@ -64,21 +64,25 @@ router.get('/todays-summary', async (req, res) => {
       matchStage.branch = { $regex: new RegExp(`^(${searchRegexStr})$`, 'i') };
     }
 
-    const totalVisitorsToday = await Visitor.countDocuments(matchStage);
+    const totalAggregation = await Visitor.aggregate([
+      { $match: matchStage },
+      { $group: { _id: null, total: { $sum: { $ifNull: ["$visitorCount", 1] } } } }
+    ]);
+    const totalVisitorsToday = totalAggregation.length > 0 ? totalAggregation[0].total : 0;
 
-    const teamCounts = await Visitor.aggregate([
+    const hostCounts = await Visitor.aggregate([
       { $match: matchStage },
       { 
         $group: {
-          _id: "$hostTeam",
-          count: { $sum: 1 }
+          _id: "$hostName",
+          count: { $sum: { $ifNull: ["$visitorCount", 1] } }
         }
       },
       { $sort: { count: -1 } }
     ]);
 
-    const teamBreakdown = teamCounts.map(t => ({
-      team: t._id || 'General',
+    const teamBreakdown = hostCounts.map(t => ({
+      hostName: t._id || 'Unknown',
       count: t.count
     }));
 

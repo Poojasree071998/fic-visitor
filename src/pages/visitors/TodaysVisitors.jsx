@@ -82,7 +82,7 @@ const TodaysVisitors = () => {
                 
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 rounded-full bg-indigo-50 text-[var(--color-brand-indigo)] flex items-center justify-center font-bold text-lg">
-                    {item.team.charAt(0).toUpperCase()}
+                    {item.hostName.charAt(0).toUpperCase()}
                   </div>
                   <div className="text-3xl font-bold text-gray-900">
                     {item.count}
@@ -90,7 +90,7 @@ const TodaysVisitors = () => {
                 </div>
                 
                 <div>
-                  <h3 className="font-bold text-gray-900 text-lg">{item.team}</h3>
+                  <h3 className="font-bold text-gray-900 text-lg">{item.hostName}</h3>
                   <p className="text-sm text-gray-500 mt-1 flex items-center gap-1">
                     <UserCheck size={14} /> Registered Visitors
                   </p>

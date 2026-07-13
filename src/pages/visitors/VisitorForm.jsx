@@ -38,6 +38,7 @@ const VisitorForm = () => {
     email: '',
     companyName: 'Forge India Connect Private Limited',
     hostName: '',
+    visitorCount: 1,
     purpose: '',
     visitDate: new Date().toISOString().split('T')[0],
     expectedArrivalTime: '',
@@ -303,6 +304,18 @@ const VisitorForm = () => {
                     <option key={host} value={host}>{host}</option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Visitors *</label>
+                <input 
+                  required 
+                  type="number" 
+                  min="1"
+                  name="visitorCount" 
+                  value={formData.visitorCount} 
+                  onChange={handleChange} 
+                  className={inputClassName} 
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Purpose of Visit *</label>

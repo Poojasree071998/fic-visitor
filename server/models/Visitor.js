@@ -10,6 +10,7 @@ const visitorSchema = new mongoose.Schema({
   companyName: { type: String },
   hostName: { type: String, required: true },
   hostTeam: { type: String, default: 'General' },
+  visitorCount: { type: Number, default: 1 },
   purpose: { type: String, required: true },
   visitDate: { type: String, required: true },
   expectedArrivalTime: { type: String },
