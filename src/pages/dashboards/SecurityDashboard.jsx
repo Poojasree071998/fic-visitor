@@ -438,6 +438,7 @@ const SecurityDashboard = () => {
         <TeamVisitorWidget branch={activeBranch} />
       </div>
     </div>
+    </div>
   );
 };
 
