@@ -41,7 +41,10 @@ export const VisitorProvider = ({ children }) => {
         : API_URL;
       
       console.log('Fetching visitors from API...', fetchUrl);
-      const response = await fetch(fetchUrl, { cache: 'no-store' });
+      const response = await fetch(fetchUrl, { 
+        cache: 'no-store',
+        headers: currentUser?.token ? { 'Authorization': `Bearer ${currentUser.token}` } : {}
+      });
       if (response.ok) {
         const data = await response.json();
         console.log('Visitors fetched successfully:', data);
@@ -129,7 +132,10 @@ export const VisitorProvider = ({ children }) => {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(currentUser?.token && { 'Authorization': `Bearer ${currentUser.token}` })
+        },
         body: JSON.stringify(newVisitor)
       });
       
@@ -167,7 +173,10 @@ export const VisitorProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(currentUser?.token && { 'Authorization': `Bearer ${currentUser.token}` })
+        },
         body: JSON.stringify(updates)
       });
       
@@ -193,7 +202,10 @@ export const VisitorProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(currentUser?.token && { 'Authorization': `Bearer ${currentUser.token}` })
+        },
         body: JSON.stringify(updates)
       });
       
@@ -216,7 +228,10 @@ export const VisitorProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_URL}/${id}/zone`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(currentUser?.token && { 'Authorization': `Bearer ${currentUser.token}` })
+        },
         body: JSON.stringify(trackingData)
       });
       

@@ -14,7 +14,9 @@ export const ZoneProvider = ({ children }) => {
   // Fetch zones from backend
   const fetchZones = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(API_URL, {
+        headers: currentUser?.token ? { 'Authorization': `Bearer ${currentUser.token}` } : {}
+      });
       if (response.ok) {
         const data = await response.json();
         setZones(data);
@@ -43,7 +45,10 @@ export const ZoneProvider = ({ children }) => {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(currentUser?.token && { 'Authorization': `Bearer ${currentUser.token}` })
+        },
         body: JSON.stringify(newZone)
       });
       if (response.ok) {
@@ -59,7 +64,10 @@ export const ZoneProvider = ({ children }) => {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(currentUser?.token && { 'Authorization': `Bearer ${currentUser.token}` })
+        },
         body: JSON.stringify(updatedData)
       });
       if (response.ok) {

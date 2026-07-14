@@ -24,6 +24,7 @@ window.fetch = async function (url, options = {}) {
         if (!headers['X-Company-Id']) headers['X-Company-Id'] = user.companyId || '';
         if (!headers['X-User-Id']) headers['X-User-Id'] = user.id || '';
         if (!headers['X-User-Role']) headers['X-User-Role'] = user.role || '';
+        if (!headers['Authorization'] && user.token) headers['Authorization'] = `Bearer ${user.token}`;
         
         options.headers = headers;
       } catch (e) {

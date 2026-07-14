@@ -13,7 +13,10 @@ export const BlacklistProvider = ({ children }) => {
 
   const fetchBlacklist = async () => {
     try {
-      const response = await fetch(API_URL, { cache: 'no-store' });
+      const response = await fetch(API_URL, { 
+        cache: 'no-store',
+        headers: currentUser?.token ? { 'Authorization': `Bearer ${currentUser.token}` } : {}
+      });
       if (response.ok) {
         const data = await response.json();
         setBlacklisted(data);
@@ -43,7 +46,10 @@ export const BlacklistProvider = ({ children }) => {
     try {
       const response = await fetch(API_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          ...(currentUser?.token && { 'Authorization': `Bearer ${currentUser.token}` })
+        },
         body: JSON.stringify({ ...data, branch: userBranch, blockedDate: new Date().toISOString().split('T')[0] })
       });
       if (response.ok) {
