@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useVisitors } from '../../context/VisitorContext';
 import { useBlacklist } from '../../context/BlacklistContext';
 import { useNotification } from '../../context/NotificationContext';
-import { useNavigate } from 'react-router-dom';
+import { useBranch } from '../../context/BranchContext';
+import { useAuth } from '../../context/AuthContext';
 import { ArrowLeft, Save, Upload, User, Calendar, FileText, Camera, IdCard, Info, Search, AlertCircle, QrCode, X } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Webcam from 'react-webcam';
@@ -11,6 +12,8 @@ const VisitorForm = () => {
   const { addVisitor, allVisitors, networkIp } = useVisitors();
   const { isBlacklisted } = useBlacklist();
   const { addNotification } = useNotification();
+  const { branches, activeBranch } = useBranch();
+  const { user } = useAuth();
   const navigate = useNavigate();
   
   const [hosts, setHosts] = useState([
@@ -44,7 +47,8 @@ const VisitorForm = () => {
     expectedArrivalTime: '',
     hostNotes: '',
     status: 'Pending',
-    photoUrl: ''
+    photoUrl: '',
+    branch: (user?.role === 'Super Admin' && activeBranch !== 'All Branches') ? activeBranch : ''
   });
 
   const [uploading, setUploading] = useState(false);
@@ -129,6 +133,11 @@ const VisitorForm = () => {
       addNotification('Registration Blocked', 'This mobile number is on the Blacklist.', 'error');
       return;
     }
+    if (user?.role === 'Super Admin' && !formData.branch && activeBranch === 'All Branches') {
+      addNotification('Action Required', 'Please select a branch location.', 'warning');
+      return;
+    }
+    
     let hostTeam = 'General';
     const match = formData.hostName.match(/\(([^)]+)\)/);
     if (match && match[1]) {
@@ -245,6 +254,17 @@ const VisitorForm = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Full Name *</label>
                 <input required type="text" name="visitorName" value={formData.visitorName} onChange={handleChange} className={inputClassName} placeholder="e.g., Jane Doe" />
               </div>
+              {user?.role === 'Super Admin' && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Branch Location *</label>
+                  <select required name="branch" value={formData.branch} onChange={handleChange} className={`${inputClassName} bg-white`}>
+                    <option value="">Select Branch</option>
+                    {branches.filter(b => b !== 'All Branches').map(branch => (
+                      <option key={branch} value={branch}>{branch}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2 flex justify-between">
                   <span>Mobile Number *</span>
