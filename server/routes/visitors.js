@@ -162,8 +162,13 @@ router.post('/', async (req, res) => {
     let profile = await VisitorProfile.findOne({ companyId: req.companyId, mobileNumber });
     let profileId;
     if (!profile) {
-      const profileCount = await VisitorProfile.countDocuments({ companyId: req.companyId });
-      profileId = `VIS${(profileCount + 1).toString().padStart(3, '0')}`;
+      const lastProfile = await VisitorProfile.findOne({ companyId: req.companyId }).sort({ createdAt: -1 });
+      let pNum = 1;
+      if (lastProfile && lastProfile.profileId && lastProfile.profileId.startsWith('VIS')) {
+        const match = lastProfile.profileId.match(/\d+$/);
+        if (match) pNum = parseInt(match[0], 10) + 1;
+      }
+      profileId = `VIS${pNum.toString().padStart(3, '0')}`;
       profile = new VisitorProfile({
         companyId: req.companyId,
         profileId,
@@ -184,10 +189,14 @@ router.post('/', async (req, res) => {
       await profile.save();
     }
 
-    // 2. Generate unique Visit ID: VISIT0001
-    const count = await Visitor.countDocuments({ companyId: req.companyId });
-    const nextNum = (count + 1).toString().padStart(4, '0');
-    const visitId = `VISIT${nextNum}`;
+    // 2. Generate unique Visit ID reliably
+    const lastVisitor = await Visitor.findOne().sort({ createdAt: -1 });
+    let vNum = 1;
+    if (lastVisitor && lastVisitor.visitId && lastVisitor.visitId.startsWith('VISIT')) {
+      const match = lastVisitor.visitId.match(/\d+$/);
+      if (match) vNum = parseInt(match[0], 10) + 1;
+    }
+    const visitId = `VISIT${vNum.toString().padStart(4, '0')}`;
     
     // 3. Generate QR Code URL
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';

@@ -148,11 +148,12 @@ export const VisitorProvider = ({ children }) => {
         });
         addNotification('Visitor Registered', `${savedVisitor.visitorName} has been pre-registered.`, 'success');
       } else {
-        throw new Error('Failed to save to database');
+        const errorData = await response.json();
+        addNotification('Registration Failed', errorData.message || 'Server rejected the request', 'error');
       }
     } catch (err) {
       console.error(err);
-      // Fallback for when backend is not running
+      // Fallback for when backend is completely unreachable (NetworkError)
       const fallbackVisitor = { ...newVisitor, id: Date.now().toString() };
       setVisitors(prev => {
         const newList = [...prev, fallbackVisitor];
