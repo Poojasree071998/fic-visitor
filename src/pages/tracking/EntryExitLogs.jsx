@@ -50,7 +50,7 @@ const EntryExitLogs = () => {
       if (!confirmRestricted) return;
     }
 
-    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeString = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     updateVisitorTracking(visitor.id, {
       status: 'Inside',
       entryTime: timeString,
@@ -75,7 +75,7 @@ const EntryExitLogs = () => {
       if (!confirmRestricted) return;
     }
 
-    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeString = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     updateVisitorTracking(visitor.id, {
       status: 'Inside', // remain inside
       currentZone: selectedZone,
@@ -85,7 +85,7 @@ const EntryExitLogs = () => {
   };
 
   const handleExit = (visitorId) => {
-    const timeString = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const timeString = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
     updateVisitorTracking(visitorId, {
       status: 'Exited',
       exitTime: timeString,

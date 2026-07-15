@@ -54,7 +54,7 @@ export const AttendanceProvider = ({ children }) => {
   }, [user, activeBranch]);
 
   const formatTime = (dateObj) => {
-    return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return dateObj.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
   const calculateHours = (startStr, endStr) => {

@@ -2,15 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
-import { Users, UserPlus, Search, Shield, Building, Trash2, GraduationCap, Briefcase, UserCheck } from 'lucide-react';
+import { Users, UserPlus, Search, Shield, Building, Trash2, GraduationCap, Briefcase, UserCheck, Edit, X, Save } from 'lucide-react';
 
 const API_URL = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/users`;
 
 const UserList = () => {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState('Active');
   const [loading, setLoading] = useState(true);
   const [branchStats, setBranchStats] = useState({ security: 0, admins: 0, visitors: 0 });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, userId: null, newStatus: null, actionText: '' });
+  const [selectedUserEdit, setSelectedUserEdit] = useState(null);
+  const [editStatus, setEditStatus] = useState('');
   const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const { activeBranch, branches } = useBranch();
@@ -72,28 +76,61 @@ const UserList = () => {
     }
   };
 
-  const updateUserBranch = async (id, newBranch) => {
+  const updateUserDetails = async (id, updates) => {
     try {
       const response = await fetch(`${API_URL}/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ branch: newBranch })
+        body: JSON.stringify(updates)
       });
       if (response.ok) {
         const updatedUser = await response.json();
         setUsers(users.map(u => (u.id || u._id) === id ? updatedUser : u));
       }
     } catch (err) {
-      console.error('Error updating user branch:', err);
+      console.error('Error updating user details:', err);
     }
   };
 
-  const filteredUsers = users.filter(user => 
-    (user.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
-    (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (user.role?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-    (user.mobileNumber || '').includes(searchQuery)
-  );
+  const toggleUserStatus = async (id, currentStatus) => {
+    const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
+    setConfirmModal({
+      isOpen: true,
+      userId: id,
+      newStatus,
+      actionText: newStatus === 'Inactive' ? 'deactivate' : 'activate'
+    });
+  };
+
+  const confirmToggleStatus = async () => {
+    const { userId, newStatus } = confirmModal;
+    setConfirmModal({ isOpen: false, userId: null, newStatus: null, actionText: '' });
+    
+    try {
+      const response = await fetch(`${API_URL}/${userId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+      if (response.ok) {
+        const updatedUser = await response.json();
+        setUsers(users.map(u => (u.id || u._id) === userId ? updatedUser : u));
+      }
+    } catch (err) {
+      console.error('Error updating user status:', err);
+    }
+  };
+
+  const filteredUsers = users.filter(user => {
+    const statusMatch = activeTab === 'Active' 
+      ? (user.status === 'Active' || !user.status) 
+      : (user.status === 'Inactive' || user.status === 'Blocked');
+    const searchMatch = (user.name?.toLowerCase() || '').includes(searchQuery.toLowerCase()) || 
+      (user.email?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (user.role?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+      (user.mobileNumber || '').includes(searchQuery);
+    return statusMatch && searchMatch;
+  });
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -146,6 +183,22 @@ const UserList = () => {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        {/* Tabs */}
+        <div className="flex border-b border-gray-200 bg-white">
+          <button
+            onClick={() => setActiveTab('Active')}
+            className={`flex-1 py-4 text-sm font-bold text-center border-b-2 transition-colors ${activeTab === 'Active' ? 'border-[var(--color-brand-indigo)] text-[var(--color-brand-indigo)]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            Active Users
+          </button>
+          <button
+            onClick={() => setActiveTab('Disabled')}
+            className={`flex-1 py-4 text-sm font-bold text-center border-b-2 transition-colors ${activeTab === 'Disabled' ? 'border-red-500 text-red-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-gray-50'}`}
+          >
+            Disabled Users
+          </button>
+        </div>
+        
         <div className="p-4 border-b border-gray-200 bg-slate-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
             <div className="relative w-full sm:w-72">
@@ -209,34 +262,32 @@ const UserList = () => {
                     </td>
                     <td className="px-6 py-4">
                       <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
-                        ${u.status === 'Inactive' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}
+                        ${u.status === 'Inactive' ? 'bg-red-100 text-red-700' : ''}
+                        ${u.status === 'Blocked' ? 'bg-yellow-100 text-yellow-700' : ''}
+                        ${(!u.status || u.status === 'Active') ? 'bg-green-100 text-green-700' : ''}
                       `}>
+                        {u.status === 'Inactive' && <span className="w-2 h-2 rounded-full bg-red-500"></span>}
+                        {u.status === 'Blocked' && <span className="w-2 h-2 rounded-full bg-yellow-500"></span>}
+                        {(!u.status || u.status === 'Active') && <span className="w-2 h-2 rounded-full bg-green-500"></span>}
                         {u.status || 'Active'}
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <div className="flex items-center gap-2 text-gray-600 text-sm">
+                      <div className="flex items-center gap-2 text-gray-600 text-sm font-medium">
                         <Building size={16} className="text-gray-400" />
-                        <select 
-                          value={u.branch || ''} 
-                          onChange={(e) => updateUserBranch(u.id || u._id, e.target.value)}
-                          className="bg-transparent border-none outline-none focus:ring-0 cursor-pointer font-medium text-gray-700 hover:text-[var(--color-brand-indigo)] transition-colors p-0"
-                        >
-                          <option value="">Select Branch</option>
-                          {assignableBranches.map(branch => (
-                            <option key={branch} value={branch}>{branch}</option>
-                          ))}
-                        </select>
+                        <span>{u.branch || 'All Branches'}</span>
                       </div>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <button 
-                        onClick={() => deleteUser(u.id)}
-                        className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete User"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => { setSelectedUserEdit(u); setEditStatus(u.status || 'Active'); }}
+                          className="px-4 py-1.5 text-xs font-bold rounded-lg transition-colors border text-[var(--color-brand-indigo)] border-indigo-200 bg-indigo-50 hover:bg-indigo-100 flex items-center gap-1.5"
+                          title="Edit User"
+                        >
+                          <Edit size={14} /> Edit
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -281,8 +332,119 @@ const UserList = () => {
               </div>
             </div>
             <div className="text-xs text-gray-400 font-medium">
-              Last Updated: Today {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              Last Updated: Today {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 text-center border-t-4 border-orange-500">
+            <Shield size={48} className="text-orange-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Confirm Action</h2>
+            <p className="text-gray-500 mb-6">
+              Are you sure you want to {confirmModal.actionText} this user?
+              {confirmModal.actionText === 'deactivate' && ' They will immediately lose access to the system.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmModal({ isOpen: false, userId: null, newStatus: null, actionText: '' })}
+                className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmToggleStatus}
+                className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl transition-colors shadow-sm"
+              >
+                Yes, {confirmModal.actionText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* Edit User Modal */}
+      {selectedUserEdit && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden relative">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <Edit size={18} className="text-[var(--color-brand-indigo)]" />
+                Edit User Details
+              </h3>
+              <button 
+                onClick={() => setSelectedUserEdit(null)} 
+                className="text-gray-400 hover:text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-full p-1"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              const formData = new FormData(e.target);
+              const updates = {
+                branch: formData.get('branch'),
+                status: formData.get('status'),
+                statusReason: formData.get('statusReason') || ''
+              };
+              await updateUserDetails(selectedUserEdit.id || selectedUserEdit._id, updates);
+              setSelectedUserEdit(null);
+              setEditStatus('');
+            }}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">User Name</label>
+                  <input readOnly defaultValue={selectedUserEdit.name} className="w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed outline-none" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                  <select 
+                    required 
+                    name="status" 
+                    value={editStatus}
+                    onChange={(e) => setEditStatus(e.target.value)}
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-indigo)] outline-none bg-white"
+                  >
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                    <option value="Blocked">Blocked</option>
+                  </select>
+                </div>
+                {editStatus === 'Blocked' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Reason for Blocking</label>
+                    <textarea 
+                      required 
+                      name="statusReason" 
+                      defaultValue={selectedUserEdit.statusReason || ''}
+                      placeholder="e.g. Policy Violation"
+                      className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-indigo)] outline-none bg-white"
+                      rows="2"
+                    ></textarea>
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                  <select required name="branch" defaultValue={selectedUserEdit.branch} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-indigo)] outline-none bg-white">
+                    <option value="">Select Branch</option>
+                    {assignableBranches.map(branch => (
+                      <option key={branch} value={branch}>{branch}</option>
+                    ))}
+                  </select>
+                  <p className="text-xs text-gray-500 mt-2">
+                    Changing the branch will automatically update the user's dashboard view upon their next login. No new credentials are required.
+                  </p>
+                </div>
+              </div>
+              <div className="px-6 py-4 bg-gray-50 flex justify-end gap-3 border-t border-gray-100">
+                <button type="button" onClick={() => setSelectedUserEdit(null)} className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg font-medium hover:bg-gray-50">Cancel</button>
+                <button type="submit" className="px-4 py-2 bg-[var(--color-brand-indigo)] text-white rounded-lg font-medium flex items-center gap-2 hover:bg-[var(--color-brand-indigo-light)]">
+                  <Save size={16} /> Save Changes
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

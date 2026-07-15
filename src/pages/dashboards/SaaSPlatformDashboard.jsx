@@ -18,6 +18,8 @@ const DashboardCard = ({ title, value, icon: Icon, colorClass, subtitle }) => (
 const SaaSPlatformDashboard = () => {
   const { user } = useAuth();
   const [companies, setCompanies] = useState([]);
+  const [payments, setPayments] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,6 +46,11 @@ const SaaSPlatformDashboard = () => {
 
   // Delete confirmation state
   const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name, code }
+
+  const [activeTab, setActiveTab] = useState('Companies');
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [selectedUpgradeCompany, setSelectedUpgradeCompany] = useState(null);
+  const [upgradeData, setUpgradeData] = useState({ plan: 'Standard', durationDays: '30' });
 
   const [isRegistering, setIsRegistering] = useState(false);
 
@@ -78,6 +85,22 @@ const SaaSPlatformDashboard = () => {
       if (!analyticsRes.ok) throw new Error('Failed to fetch analytics');
       const analyticsData = await analyticsRes.json();
       setAnalytics(analyticsData);
+
+      // Fetch payments
+      const paymentsRes = await fetch(`${API_BASE}/api/super-admin/payments`, {
+        headers: getHeaders()
+      });
+      if (!paymentsRes.ok) throw new Error('Failed to fetch payments');
+      const paymentsData = await paymentsRes.json();
+      setPayments(paymentsData);
+
+      // Fetch audit logs
+      const auditRes = await fetch(`${API_BASE}/api/audit-logs`, {
+        headers: getHeaders()
+      });
+      if (!auditRes.ok) throw new Error('Failed to fetch audit logs');
+      const auditData = await auditRes.json();
+      setAuditLogs(auditData);
 
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -149,19 +172,22 @@ const SaaSPlatformDashboard = () => {
     }
   };
 
-  // Extend subscription expiration date by 30 days
-  const handleExtendSubscription = async (id, currentExpiryStr) => {
+  // Process Subscription Upgrade
+  const handleProcessUpgrade = async (e) => {
+    e.preventDefault();
+    if (!selectedUpgradeCompany) return;
     try {
-      const currentExpiry = currentExpiryStr ? new Date(currentExpiryStr) : new Date();
-      currentExpiry.setDate(currentExpiry.getDate() + 30);
-
-      const response = await fetch(`${API_BASE}/api/super-admin/companies/${id}`, {
+      const response = await fetch(`${API_BASE}/api/super-admin/companies/${selectedUpgradeCompany._id}`, {
         method: 'PATCH',
         headers: getHeaders(),
-        body: JSON.stringify({ subscriptionExpiresAt: currentExpiry })
+        body: JSON.stringify({ 
+          subscription: upgradeData.plan,
+          durationDays: upgradeData.durationDays
+        })
       });
-      if (!response.ok) throw new Error('Failed to extend subscription expiry');
-      showToast('Subscription extended by 30 days', 'success');
+      if (!response.ok) throw new Error('Failed to upgrade subscription');
+      showToast(`Subscription successfully upgraded to ${upgradeData.plan}`, 'success');
+      setShowUpgradeModal(false);
       fetchData();
     } catch (err) {
       showToast(err.message, 'error');
@@ -277,153 +303,412 @@ const SaaSPlatformDashboard = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <DashboardCard 
-          title="Total Registered Tenants" 
+          title="Total Companies" 
           value={analytics ? analytics.totalCompanies : '-'} 
           icon={Building} 
           colorClass="bg-blue-50 text-blue-600 border border-blue-100" 
         />
         <DashboardCard 
           title="Active Subscriptions" 
-          value={analytics ? `${analytics.activeCompanies} / ${analytics.totalCompanies}` : '-'} 
+          value={analytics ? analytics.activeCompanies : '-'} 
           icon={UserCheck} 
           colorClass="bg-green-50 text-green-600 border border-green-100" 
-          subtitle={`${analytics ? analytics.inactiveCompanies : 0} inactive/pending`}
         />
         <DashboardCard 
-          title="Platform Visitors" 
-          value={analytics ? analytics.totalVisitors : '-'} 
-          icon={Users} 
-          colorClass="bg-purple-50 text-purple-600 border border-purple-100" 
-        />
-        <DashboardCard 
-          title="MRR (Mock billing)" 
-          value={analytics ? `$${analytics.monthlyRevenue}` : '-'} 
-          icon={CreditCard} 
-          colorClass="bg-indigo-50 text-indigo-600 border border-indigo-100" 
-          subtitle={`Annual Projection: $${analytics ? analytics.annualRevenue : 0}`}
-        />
-        <DashboardCard 
-          title="Inactive Tenants" 
+          title="Expired Subscriptions" 
           value={analytics ? analytics.inactiveCompanies : '-'} 
           icon={ShieldAlert} 
           colorClass="bg-red-50 text-red-600 border border-red-100" 
-          subtitle="Awaiting activation"
+        />
+        <DashboardCard 
+          title="Monthly Revenue" 
+          value={analytics ? `₹${analytics.monthlyRevenue.toLocaleString('en-IN')}` : '-'} 
+          icon={CreditCard} 
+          colorClass="bg-indigo-50 text-indigo-600 border border-indigo-100" 
         />
       </div>
 
       {/* Main Panel */}
       <div className="bg-white rounded-xl shadow-md border border-gray-200 overflow-hidden">
-        <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h3 className="text-lg font-bold text-gray-900">Tenant Companies</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Manage details, plans, active statuses, and expirations</p>
-          </div>
-          {analytics?.tiers && (
-            <div className="flex space-x-4 text-xs font-semibold text-gray-600">
-              <span className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full border border-orange-100">1-Day Trial: {analytics.tiers.OneDayTrial}</span>
-              <span className="bg-slate-100 px-3 py-1 rounded-full border">Basic: {analytics.tiers.Basic}</span>
-              <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100">Standard: {analytics.tiers.Standard}</span>
-              <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-100">Enterprise: {analytics.tiers.Enterprise}</span>
-            </div>
-          )}
+        <div className="border-b border-gray-200 bg-slate-50 flex items-center px-4 space-x-1">
+          <button 
+            onClick={() => setActiveTab('Companies')}
+            className={`px-6 py-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'Companies' ? 'border-[#1E1B6E] text-[#1E1B6E]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-slate-100'}`}
+          >
+            Companies
+          </button>
+          <button 
+            onClick={() => setActiveTab('Subscriptions')}
+            className={`px-6 py-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'Subscriptions' ? 'border-[#1E1B6E] text-[#1E1B6E]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-slate-100'}`}
+          >
+            Subscriptions
+          </button>
+          <button 
+            onClick={() => setActiveTab('Payments')}
+            className={`px-6 py-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'Payments' ? 'border-[#1E1B6E] text-[#1E1B6E]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-slate-100'}`}
+          >
+            Payments
+          </button>
+          <button 
+            onClick={() => setActiveTab('Audit Logs')}
+            className={`px-6 py-4 font-semibold text-sm border-b-2 transition-colors ${activeTab === 'Audit Logs' ? 'border-[#1E1B6E] text-[#1E1B6E]' : 'border-transparent text-gray-500 hover:text-gray-700 hover:bg-slate-100'}`}
+          >
+            Audit Logs
+          </button>
         </div>
 
-        <div className="overflow-x-auto pb-2">
-          <table className="w-full text-left border-collapse min-w-max">
-            <thead>
-              <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
-                <th className="px-6 py-4 font-medium">Company Name</th>
-                <th className="px-6 py-4 font-medium">Company Code</th>
-                <th className="px-6 py-4 font-medium">Plan Tier</th>
-                <th className="px-6 py-4 font-medium">Expiry Date</th>
-                <th className="px-6 py-4 font-medium text-center">Security Users</th>
-                <th className="px-6 py-4 font-medium text-center">Visitors</th>
-                <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-100">
-              {companies.map((comp) => (
-                <tr key={comp._id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 font-semibold text-gray-900">{comp.name}</td>
-                  <td className="px-6 py-4">
-                    <span className="font-mono text-xs bg-slate-100 text-gray-700 px-2.5 py-1 rounded border border-slate-200 font-semibold">{comp.code}</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <select 
-                      value={comp.subscription} 
-                      onChange={(e) => handlePlanChange(comp._id, e.target.value)}
-                      className="text-xs bg-white border border-gray-300 rounded px-2 py-1 font-semibold text-gray-700 focus:outline-none focus:ring-1 focus:ring-[#1E1B6E]"
-                    >
-                      <option value="One Day Trial">One Day Trial</option>
-                      <option value="Basic">Basic</option>
-                      <option value="Standard">Standard</option>
-                      <option value="Enterprise">Enterprise</option>
-                    </select>
-                  </td>
-                  <td className="px-6 py-4 text-xs font-medium text-gray-600">
-                    <div className="flex items-center space-x-1.5">
-                      <Calendar size={13} className="text-gray-400" />
-                      <span>{comp.subscriptionExpiresAt ? new Date(comp.subscriptionExpiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never'}</span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-center font-semibold text-gray-700 text-xs">{comp.userCount || 0}</td>
-                  <td className="px-6 py-4 text-center font-semibold text-gray-700 text-xs">{comp.visitorCount || 0}</td>
-                  <td className="px-6 py-4">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                      comp.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                    }`}>
-                      {comp.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right space-x-2">
-                    <button 
-                      onClick={() => handleToggleStatus(comp._id, comp.status)}
-                      className={`text-xs px-2.5 py-1 rounded border font-semibold transition-colors ${
-                        comp.status === 'Active' ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
-                      }`}
-                    >
-                      {comp.status === 'Active' ? 'Deactivate' : 'Activate'}
-                    </button>
-                    <button 
-                      onClick={() => handleExtendSubscription(comp._id, comp.subscriptionExpiresAt)}
-                      className="text-xs px-2.5 py-1 bg-indigo-50 text-[var(--color-brand-indigo)] border border-indigo-200 rounded font-semibold hover:bg-indigo-100 transition-colors"
-                    >
-                      +30 Days
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (comp.code === 'SYSTEM' || comp.code === 'FIC001') {
-                          showToast(`'${comp.code}' is a system-protected tenant and cannot be deleted.`, 'error');
-                          return;
-                        }
-                        setDeleteConfirm({ id: comp._id, name: comp.name, code: comp.code });
-                      }}
-                      className={`text-xs px-2.5 py-1 rounded border font-semibold transition-colors ${
-                        comp.code === 'SYSTEM' || comp.code === 'FIC001'
-                          ? 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'
-                          : 'bg-red-50 text-red-700 border-red-300 hover:bg-red-600 hover:text-white hover:border-red-600'
-                      }`}
-                      title={comp.code === 'SYSTEM' || comp.code === 'FIC001' ? 'System-protected tenant cannot be deleted' : `Delete ${comp.name}`}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {companies.length === 0 && !loading && (
-                <tr>
-                  <td colSpan="8" className="px-6 py-12 text-center text-gray-500">
-                    No companies registered.
-                  </td>
-                </tr>
+        {activeTab === 'Companies' && (
+          <>
+            <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Tenant Companies</h3>
+                <p className="text-xs text-gray-500 mt-0.5">Manage details, active statuses, and expirations</p>
+              </div>
+              {analytics?.tiers && (
+                <div className="flex space-x-4 text-xs font-semibold text-gray-600">
+                  <span className="bg-orange-50 text-orange-700 px-3 py-1 rounded-full border border-orange-100">1-Day Trial: {analytics.tiers.OneDayTrial}</span>
+                  <span className="bg-slate-100 px-3 py-1 rounded-full border">Basic: {analytics.tiers.Basic}</span>
+                  <span className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full border border-blue-100">Standard: {analytics.tiers.Standard}</span>
+                  <span className="bg-purple-50 text-purple-700 px-3 py-1 rounded-full border border-purple-100">Enterprise: {analytics.tiers.Enterprise}</span>
+                </div>
               )}
-            </tbody>
-          </table>
-        </div>
+            </div>
+
+            <div className="overflow-x-auto pb-2">
+              <table className="w-full text-left border-collapse min-w-max">
+                <thead>
+                  <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
+                    <th className="px-6 py-4 font-medium">Company Name</th>
+                    <th className="px-6 py-4 font-medium">Company Code</th>
+                    <th className="px-6 py-4 font-medium text-center">Branches</th>
+                    <th className="px-6 py-4 font-medium text-center">Security Users</th>
+                    <th className="px-6 py-4 font-medium text-center">Visitors</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="px-6 py-4 font-medium text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {companies.map((comp) => (
+                    <tr key={comp._id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-gray-900">{comp.name}</td>
+                      <td className="px-6 py-4">
+                        <span className="font-mono text-xs bg-slate-100 text-gray-700 px-2.5 py-1 rounded border border-slate-200 font-semibold">{comp.code}</span>
+                      </td>
+                      <td className="px-6 py-4 text-center font-semibold text-gray-700 text-xs">
+                        {comp.branchCount || 0} / {comp.limits?.branches === -1 ? '∞' : comp.limits?.branches}
+                      </td>
+                      <td className="px-6 py-4 text-center font-semibold text-gray-700 text-xs">
+                        {comp.securityCount || 0} / {comp.limits?.securityUsers === -1 ? '∞' : comp.limits?.securityUsers}
+                      </td>
+                      <td className="px-6 py-4 text-center font-semibold text-gray-700 text-xs">
+                        {comp.visitorCount || 0} / {comp.limits?.visitors === -1 ? '∞' : comp.limits?.visitors}
+                      </td>
+                      <td className="px-6 py-4">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          comp.status === 'Active' ? 'bg-green-100 text-green-700' : 
+                          comp.status === 'Expired' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {comp.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <button 
+                          onClick={() => handleToggleStatus(comp._id, comp.status)}
+                          className="px-3 py-1.5 bg-slate-100 text-gray-700 text-xs font-semibold rounded hover:bg-slate-200 mr-2 border border-slate-200"
+                        >
+                          {comp.status === 'Active' ? 'Deactivate' : 'Activate'}
+                        </button>
+                        <button 
+                          onClick={() => setDeleteConfirm({ id: comp._id, name: comp.name, code: comp.code })}
+                          className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold rounded border border-red-200"
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {companies.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500 font-medium bg-slate-50/50">
+                        No tenant companies found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'Subscriptions' && (
+          <>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">Subscription Management</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Track plans, expirations, and process upgrades</p>
+            </div>
+            
+            <div className="overflow-x-auto pb-2">
+              <table className="w-full text-left border-collapse min-w-max">
+                <thead>
+                  <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
+                    <th className="px-6 py-4 font-medium">Company Name</th>
+                    <th className="px-6 py-4 font-medium">Plan Tier</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="px-6 py-4 font-medium">Expiry Date</th>
+                    <th className="px-6 py-4 font-medium text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {companies.map((comp) => {
+                    const expiry = new Date(comp.subscriptionExpiresAt);
+                    const diffTime = expiry - new Date();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    
+                    let statusColor = 'bg-green-100 text-green-700';
+                    let statusDot = 'bg-green-500';
+                    let statusText = 'Active';
+                    
+                    if (comp.status === 'Expired' || diffDays < 0) {
+                      statusColor = 'bg-red-100 text-red-700';
+                      statusDot = 'bg-red-500';
+                      statusText = 'Expired';
+                    } else if (diffDays <= 7) {
+                      statusColor = 'bg-yellow-100 text-yellow-700';
+                      statusDot = 'bg-yellow-500';
+                      statusText = `Expiring (${diffDays}d)`;
+                    }
+
+                    return (
+                      <tr key={`sub-${comp._id}`} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-semibold text-gray-900">
+                          {comp.name}
+                          <div className="text-xs text-gray-500 font-normal">{comp.code}</div>
+                        </td>
+                        <td className="px-6 py-4 font-bold text-[#1E1B6E] text-sm">
+                          {comp.subscription}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${statusColor}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${statusDot}`}></span>
+                            {statusText}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                          <div className="flex items-center space-x-1.5">
+                            <Calendar size={13} className="text-gray-400" />
+                            <span>{comp.subscriptionExpiresAt ? new Date(comp.subscriptionExpiresAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : 'Never'}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <button 
+                            onClick={() => {
+                              setSelectedUpgradeCompany(comp);
+                              setUpgradeData({ plan: comp.subscription === 'One Day Trial' ? 'Basic' : comp.subscription, durationDays: '30' });
+                              setShowUpgradeModal(true);
+                            }}
+                            className="px-4 py-2 bg-[#1E1B6E] hover:bg-opacity-90 text-white text-xs font-bold rounded-lg shadow-sm transition-colors"
+                          >
+                            {statusText === 'Expired' ? 'Renew' : 'Upgrade'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'Payments' && (
+          <>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">Payment History</h3>
+              <p className="text-xs text-gray-500 mt-0.5">Track all subscription renewals and plan purchases</p>
+            </div>
+            
+            <div className="overflow-x-auto pb-2">
+              <table className="w-full text-left border-collapse min-w-max">
+                <thead>
+                  <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
+                    <th className="px-6 py-4 font-medium">Company Name</th>
+                    <th className="px-6 py-4 font-medium">Plan</th>
+                    <th className="px-6 py-4 font-medium text-right">Amount</th>
+                    <th className="px-6 py-4 font-medium">Payment Date</th>
+                    <th className="px-6 py-4 font-medium">Expiry Date</th>
+                    <th className="px-6 py-4 font-medium text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {payments.map((pay) => (
+                    <tr key={`pay-${pay._id}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 font-semibold text-gray-900">
+                        {pay.companyName}
+                        <div className="text-xs text-gray-500 font-normal">{pay.companyId}</div>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-[#1E1B6E] text-sm">
+                        {pay.plan}
+                        <div className="text-[10px] text-gray-500 font-normal mt-0.5">{pay.durationDays} Days</div>
+                      </td>
+                      <td className="px-6 py-4 font-bold text-gray-900 text-right">
+                        ₹{pay.amount.toLocaleString('en-IN')}
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                        <div className="flex items-center space-x-1.5">
+                          <Calendar size={13} className="text-gray-400" />
+                          <span>{new Date(pay.paymentDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-xs font-medium text-gray-600">
+                        <div className="flex items-center space-x-1.5">
+                          <Calendar size={13} className="text-gray-400" />
+                          <span>{new Date(pay.expiryDate).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold ${
+                          pay.status === 'Paid' ? 'bg-green-100 text-green-700' : 
+                          pay.status === 'Failed' ? 'bg-red-100 text-red-700' : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {pay.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {payments.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500 font-medium bg-slate-50/50">
+                        No payment records found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+
+        {activeTab === 'Audit Logs' && (
+          <>
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-bold text-gray-900">Platform Audit Logs</h3>
+              <p className="text-xs text-gray-500 mt-0.5">System-wide monitoring of critical administrative actions</p>
+            </div>
+            <div className="overflow-x-auto pb-2">
+              <table className="w-full text-left border-collapse min-w-max">
+                <thead>
+                  <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
+                    <th className="px-6 py-4 font-medium">Timestamp</th>
+                    <th className="px-6 py-4 font-medium">User & Role</th>
+                    <th className="px-6 py-4 font-medium">Company</th>
+                    <th className="px-6 py-4 font-medium">Action</th>
+                    <th className="px-6 py-4 font-medium">Module</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 text-sm">
+                  {auditLogs.map((log) => (
+                    <tr key={`saas-audit-${log._id}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                        {new Date(log.createdAt).toLocaleString('en-US', { 
+                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
+                        })}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-semibold text-gray-900">{log.userName}</div>
+                        <div className="text-[10px] text-gray-500 font-normal uppercase tracking-wider">{log.role}</div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-semibold text-gray-900">{log.companyName || 'Unknown'}</div>
+                        <div className="text-[10px] text-gray-500 font-normal tracking-wider">{log.companyId}</div>
+                      </td>
+                      <td className="px-6 py-4 font-medium text-gray-800">
+                        {log.action}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-gray-700">
+                          {log.module}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {auditLogs.length === 0 && !loading && (
+                    <tr>
+                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500 font-medium bg-slate-50/50">
+                        No audit logs available.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
+
+      {/* Upgrade Plan Modal */}
+      {showUpgradeModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="bg-slate-50 border-b border-gray-100 p-6 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">Upgrade Subscription</h3>
+                <p className="text-xs text-gray-500 mt-1">{selectedUpgradeCompany?.name}</p>
+              </div>
+              <button onClick={() => setShowUpgradeModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors p-1 hover:bg-gray-100 rounded-full">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleProcessUpgrade} className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Select Plan Tier</label>
+                  <select 
+                    required
+                    value={upgradeData.plan}
+                    onChange={(e) => setUpgradeData({...upgradeData, plan: e.target.value})}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E1B6E] focus:border-transparent transition-all outline-none text-gray-900 font-medium"
+                  >
+                    <option value="Basic">Basic</option>
+                    <option value="Standard">Standard</option>
+                    <option value="Enterprise">Enterprise</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Duration</label>
+                  <select 
+                    required
+                    value={upgradeData.durationDays}
+                    onChange={(e) => setUpgradeData({...upgradeData, durationDays: e.target.value})}
+                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-[#1E1B6E] focus:border-transparent transition-all outline-none text-gray-900 font-medium"
+                  >
+                    <option value="30">1 Month (30 Days)</option>
+                    <option value="90">3 Months (90 Days)</option>
+                    <option value="365">1 Year (365 Days)</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="mt-8 flex space-x-3">
+                <button 
+                  type="button"
+                  onClick={() => setShowUpgradeModal(false)}
+                  className="flex-1 px-4 py-3 bg-white border border-slate-200 text-gray-700 font-semibold rounded-xl hover:bg-slate-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="submit"
+                  className="flex-1 px-4 py-3 bg-[#1E1B6E] hover:bg-opacity-95 text-white font-semibold rounded-xl shadow-md transition-colors"
+                >
+                  Confirm Upgrade
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* CREATE MODAL */}
       {showCreateModal && (

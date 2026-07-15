@@ -30,12 +30,16 @@ const userSchema = new mongoose.Schema({
   role: {
     type: String,
     required: true,
-    enum: ['Super Admin', 'MD', 'Admin', 'Security', 'Visitor', 'Student', 'Staff']
+    enum: ['Super Admin', 'MD', 'Admin', 'Security', 'Visitor', 'HR']
   },
   status: {
     type: String,
-    enum: ['Active', 'Inactive'],
+    enum: ['Active', 'Inactive', 'Blocked'],
     default: 'Active'
+  },
+  statusReason: {
+    type: String,
+    trim: true
   },
   branch: {
     type: String,

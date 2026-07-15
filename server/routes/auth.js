@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
+const logAction = require('../utils/auditLogger');
 
 // POST login
 router.post('/login', async (req, res) => {
@@ -13,22 +14,16 @@ router.post('/login', async (req, res) => {
 
     // Special hardcoded bootstrap admin to prevent lockout
     if (email === 'saas@fic.com' && password === 'saas123') {
-      return res.json({ id: 'bootstrap-saas', name: 'SaaS Platform Owner', email: 'saas@fic.com', role: 'SaaS Super Admin', branch: 'All Branches', companyId: 'SYSTEM' });
+      return res.json({ id: 'bootstrap-saas', name: 'SaaS Platform Owner', email: 'saas@fic.com', role: 'SaaS Super Admin', branch: 'All Branches', companyId: 'SYSTEM', companyName: 'System Administration' });
     }
-    if (email === 'sandeep@fic.com' && password === 'sandeep') {
-      return res.json({ id: 'bootstrap-admin', name: 'Sandeep', email: 'sandeep@fic.com', role: 'Super Admin', branch: 'All Branches', companyId: 'FIC001' });
+    if (email === 'sandeep@gmail.com' && password === 'sandeep') {
+      return res.json({ id: 'bootstrap-admin', name: 'Sandeep', email: 'sandeep@gmail.com', role: 'Super Admin', branch: 'All Branches', companyId: 'FIC001', companyName: 'FIC Group' });
     }
-    if (email === 'md@example.com' && password === '123456') {
-      return res.json({ id: 'bootstrap-md', name: 'Managing Director', email: 'md@example.com', role: 'MD', branch: 'All Branches', companyId: 'FIC001' });
+    if (email === 'vaidee@gmail.com' && password === 'vaidee') {
+      return res.json({ id: 'bootstrap-vaidee', name: 'Vaideeswari', email: 'vaidee@gmail.com', role: 'Admin', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
     }
-    if (email === 'admin@branch.com' && password === '123456') {
-      return res.json({ id: 'bootstrap-branch', name: 'Admin User', email: 'admin@branch.com', role: 'Admin', branch: 'Chennai', companyId: 'FIC001' });
-    }
-    if (email === 'security@example.com' && password === '123456') {
-      return res.json({ id: 'bootstrap-security', name: 'Gate Security', email: 'security@example.com', role: 'Security', branch: 'Chennai', companyId: 'FIC001' });
-    }
-    if (email === 'visitor@example.com' && password === '123456') {
-      return res.json({ id: 'bootstrap-visitor', name: 'Guest Visitor', email: 'visitor@example.com', role: 'Visitor', branch: 'Chennai', companyId: 'FIC001' });
+    if (email === 'sabari@gmail.com' && password === 'sabari') {
+      return res.json({ id: 'bootstrap-sabari', name: 'Sabari', email: 'sabari@gmail.com', role: 'Security', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
     }
 
     // Find user in MongoDB
@@ -43,6 +38,16 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
+    // Block inactive and suspended users from logging in
+    if (user.status === 'Inactive') {
+      return res.status(403).json({ message: 'Your account has been deactivated. Please contact your administrator.' });
+    }
+    
+    if (user.status === 'Blocked') {
+      const reasonStr = user.statusReason ? `\n\nReason:\n${user.statusReason}` : '';
+      return res.status(403).json({ message: `Your account has been blocked by the Super Admin.${reasonStr}\n\nPlease contact your administrator.` });
+    }
+
     // Check company status
     const Company = require('../models/Company');
     const company = await Company.findOne({ code: user.companyId });
@@ -50,20 +55,51 @@ router.post('/login', async (req, res) => {
       return res.status(404).json({ message: 'Company not found' });
     }
 
+    let isExpired = false;
+    let subscription = 'Basic';
+    let subscriptionExpiresAt = null;
+
     if (company) {
-      if (company.status !== 'Active' && user.role !== 'SaaS Super Admin') {
+      if (company.status !== 'Active' && company.status !== 'Expired' && user.role !== 'SaaS Super Admin') {
         return res.status(403).json({ message: `Your company account is currently ${company.status}. Please contact support.` });
       }
-      if (company.subscriptionExpiresAt && new Date() > new Date(company.subscriptionExpiresAt) && user.role !== 'SaaS Super Admin') {
-        return res.status(403).json({ message: `Your subscription has expired. Please contact support.` });
+      
+      if (company.subscriptionExpiresAt && new Date() > new Date(company.subscriptionExpiresAt)) {
+        isExpired = true;
+        
+        // Auto-expire in database if not already
+        if (company.status !== 'Expired') {
+          company.status = 'Expired';
+          await company.save();
+        }
       }
+      
+      subscription = company.subscription;
+      subscriptionExpiresAt = company.subscriptionExpiresAt;
     }
 
     // Return user data without password
     const u = user.toJSON();
     delete u.password;
     
-    res.json(u);
+    // Explicitly construct the response object to ensure properties are added
+    const responsePayload = {
+      ...u,
+      companyName: company ? company.name : (u.companyId === 'SYSTEM' ? 'System Administration' : undefined),
+      isExpired,
+      subscription,
+      subscriptionExpiresAt
+    };
+
+    // Log the action manually since req.user isn't set yet
+    await logAction(req, 'Login', 'Authentication', {
+      companyId: responsePayload.companyId,
+      companyName: responsePayload.companyName,
+      userName: responsePayload.name,
+      role: responsePayload.role
+    });
+    
+    res.json(responsePayload);
   } catch (err) {
     console.error('Login error:', err);
     res.status(500).json({ message: 'Server error during login' });
@@ -154,6 +190,14 @@ router.post('/register-company', async (req, res) => {
     if (io) {
       io.emit('new_notification', newNotification);
     }
+
+    // Log the action
+    await logAction(req, 'Company Created', 'Tenant Management', {
+      companyId: 'SYSTEM',
+      companyName: 'System Administration',
+      userName: adminName,
+      role: 'SaaS Super Admin'
+    });
 
     const sanitizedUser = user.toJSON();
     delete sanitizedUser.password;

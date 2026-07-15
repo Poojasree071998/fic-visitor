@@ -133,9 +133,16 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
             <Menu size={24} />
           </button>
         )}
-        <h2 className="text-xl font-semibold text-gray-800 hidden sm:block">
-          Welcome back, {user?.name || 'User'}
-        </h2>
+        <div className="flex flex-col hidden sm:block">
+          <h2 className="text-xl font-semibold text-gray-800">
+            Welcome back, {user?.name || 'User'}
+          </h2>
+          {user?.companyName && (
+            <span className="text-xs font-bold text-[var(--color-brand-indigo)] uppercase tracking-wider">
+              {user.companyName}
+            </span>
+          )}
+        </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2 bg-slate-50 px-2 sm:px-3 py-1.5 rounded-lg border border-gray-200">
           <MapPin size={16} className="text-[var(--color-brand-indigo)] shrink-0" />
@@ -217,7 +224,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
                             {notification.title}
                           </h4>
                           <span className="text-[10px] text-gray-400 shrink-0 whitespace-nowrap">
-                            {new Date(notification.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            {new Date(notification.createdAt).toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', hour12: true})}
                           </span>
                         </div>
                         <p className={`text-xs ${!notification.isRead ? 'text-gray-700' : 'text-gray-500'} line-clamp-2 leading-relaxed`}>

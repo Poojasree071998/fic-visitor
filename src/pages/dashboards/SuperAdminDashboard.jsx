@@ -2,7 +2,7 @@ import React from 'react';
 import { useVisitors } from '../../context/VisitorContext';
 import { useBranch } from '../../context/BranchContext';
 import { useZones } from '../../context/ZoneContext';
-import { Users, UserCheck, Clock, Ban, Building, MapPin, ShieldAlert, Activity } from 'lucide-react';
+import { Users, UserCheck, Clock, Ban, Building, MapPin, ShieldAlert, Activity, CreditCard } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import TodaysVisitorsCard from '../../components/dashboard/TodaysVisitorsCard';
@@ -29,6 +29,18 @@ const SuperAdminDashboard = () => {
   const { zones } = useZones();
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+  const [usageStats, setUsageStats] = React.useState(null);
+
+  React.useEffect(() => {
+    if (currentUser?.role !== 'SaaS Super Admin') {
+      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/company/usage`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }
+      })
+      .then(res => res.json())
+      .then(data => setUsageStats(data))
+      .catch(console.error);
+    }
+  }, [currentUser]);
 
   const today = new Date().toISOString().split('T')[0];
   const totalVisitors = visitors.length;
@@ -118,6 +130,85 @@ const SuperAdminDashboard = () => {
           <span>Live Feed Active</span>
         </div>
       </div>
+
+      {currentUser?.role !== 'SaaS Super Admin' && (
+        <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex flex-col xl:flex-row justify-between items-center gap-6 border-l-4 border-l-[#1E1B6E]">
+          <div className="flex items-center space-x-4 min-w-[200px]">
+            <div className="w-12 h-12 bg-indigo-50 rounded-full flex items-center justify-center text-[#1E1B6E]">
+              <CreditCard size={24} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Current Plan</p>
+              <h2 className="text-xl font-bold text-gray-900">{currentUser?.subscription || 'N/A'}</h2>
+            </div>
+          </div>
+          
+          {usageStats && (
+            <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-3 gap-4 border-y xl:border-y-0 xl:border-x border-gray-100 py-4 xl:py-0 xl:px-8">
+              <div>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-gray-500 uppercase">Visitors (This Mth)</span>
+                  <span className="text-gray-900">{usageStats.current.visitors} / {usageStats.limits.visitors === -1 ? '∞' : usageStats.limits.visitors}</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="bg-[#1E1B6E] h-2 rounded-full" style={{ width: usageStats.limits.visitors === -1 ? '100%' : `${Math.min((usageStats.current.visitors / usageStats.limits.visitors) * 100, 100)}%` }}></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-gray-500 uppercase">Security Users</span>
+                  <span className="text-gray-900">{usageStats.current.securityUsers} / {usageStats.limits.securityUsers === -1 ? '∞' : usageStats.limits.securityUsers}</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full" style={{ width: usageStats.limits.securityUsers === -1 ? '100%' : `${Math.min((usageStats.current.securityUsers / usageStats.limits.securityUsers) * 100, 100)}%` }}></div>
+                </div>
+              </div>
+              
+              <div>
+                <div className="flex justify-between text-xs font-semibold mb-1">
+                  <span className="text-gray-500 uppercase">Branches</span>
+                  <span className="text-gray-900">{usageStats.current.branches} / {usageStats.limits.branches === -1 ? '∞' : usageStats.limits.branches}</span>
+                </div>
+                <div className="w-full bg-slate-100 rounded-full h-2">
+                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: usageStats.limits.branches === -1 ? '100%' : `${Math.min((usageStats.current.branches / usageStats.limits.branches) * 100, 100)}%` }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center gap-8 min-w-[250px] justify-end">
+            <div className="text-right">
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Status</p>
+              <p className={`font-bold ${currentUser?.isExpired ? 'text-red-600' : 'text-green-600'}`}>
+                {currentUser?.isExpired ? 'Expired' : 'Active'}
+              </p>
+            </div>
+            
+            <div className="text-right border-l pl-8">
+              <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Expires In</p>
+              <p className="font-bold text-gray-900">
+                {currentUser?.subscriptionExpiresAt ? (
+                  (() => {
+                    const diffTime = new Date(currentUser.subscriptionExpiresAt) - new Date();
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    if (diffDays < 0) return <span className="text-red-600">Expired</span>;
+                    if (diffDays === 0) return <span className="text-yellow-600">Today</span>;
+                    return `${diffDays} Days`;
+                  })()
+                ) : 'N/A'}
+              </p>
+            </div>
+            
+            <button 
+              onClick={() => navigate('/subscription')}
+              className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-gray-800 text-sm font-bold rounded-lg transition-colors border border-slate-200 hidden sm:block"
+            >
+              Manage
+            </button>
+          </div>
+        </div>
+      )}
 
       {pendingApprovals > 0 && (
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-6 shadow-sm mb-6">

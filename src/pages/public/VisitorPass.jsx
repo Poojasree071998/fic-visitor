@@ -35,7 +35,7 @@ const VisitorPass = () => {
   const updateStatus = async (action) => {
     try {
       const now = new Date();
-      const timeString = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const timeString = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
       
       let updatePayload = {};
       
@@ -58,7 +58,10 @@ const VisitorPass = () => {
       const apiUrl = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/visitors/${visitor.id}/zone`;
       const response = await fetch(apiUrl, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Company-Id': visitor.companyId || 'FIC001'
+        },
         body: JSON.stringify(updatePayload)
       });
 

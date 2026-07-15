@@ -20,13 +20,23 @@ const companySchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Active', 'Inactive', 'Suspended'],
+    enum: ['Active', 'Inactive', 'Suspended', 'Expired'],
     default: 'Active'
   },
   subscriptionExpiresAt: {
     type: Date,
     required: true
-  }
+  },
+  upgradeHistory: [{
+    plan: String,
+    startDate: Date,
+    endDate: Date,
+    updatedBy: String,
+    date: {
+      type: Date,
+      default: Date.now
+    }
+  }]
 }, { timestamps: true });
 
 // Transform _id to id in JSON response

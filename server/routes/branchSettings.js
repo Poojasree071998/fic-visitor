@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const BranchSetting = require('../models/BranchSetting');
 const authMiddleware = require('../middleware/authMiddleware');
+const logAction = require('../utils/auditLogger');
 
 router.use(authMiddleware);
 
@@ -38,23 +39,20 @@ router.post('/', async (req, res) => {
     
     // Check plan limits
     const Company = require('../models/Company');
+    const planLimits = require('../config/plans');
     const company = await Company.findOne({ code: req.companyId });
-    if (company) {
-      const plan = company.subscription;
-      let limit = -1;
-      if (plan === 'Basic') limit = 1;
-      else if (plan === 'Standard') limit = 5;
-
-      if (limit !== -1) {
+    if (company && company.subscription) {
+      const limits = planLimits[company.subscription];
+      if (limits && limits.branches !== -1) {
         const existing = await BranchSetting.findOne({ 
           companyId: req.companyId, 
           branchName: { $regex: new RegExp(`^${branchName}$`, 'i') } 
         });
         if (!existing) {
           const count = await BranchSetting.countDocuments({ companyId: req.companyId });
-          if (count >= limit) {
+          if (count >= limits.branches) {
             return res.status(403).json({ 
-              message: `Plan Limit Exceeded: Your current plan (${plan}) only allows up to ${limit} branch. Please upgrade to create more.` 
+              message: `Maximum branches reached. Your current plan (${company.subscription}) only allows up to ${limits.branches} branches. Please upgrade your subscription to create more.` 
             });
           }
         }
@@ -99,6 +97,11 @@ router.post('/', async (req, res) => {
       if (io) {
         io.emit('new_notification', newNotification);
       }
+      // Audit log
+      await logAction(req, `Branch Added: ${branchName}`, 'Settings');
+    } else {
+      // Audit log
+      await logAction(req, `Branch Settings Updated: ${branchName}`, 'Settings');
     }
     
     res.json(setting);

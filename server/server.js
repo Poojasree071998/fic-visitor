@@ -49,6 +49,8 @@ const notificationRoutes = require('./routes/notificationRoutes');
 const attendanceRouter = require('./routes/attendance');
 const branchSettingsRouter = require('./routes/branchSettings');
 const superAdminRouter = require('./routes/superAdmin');
+const companyRouter = require('./routes/company');
+const auditLogsRouter = require('./routes/auditLogs');
 
 app.use('/api/visitors', visitorsRouter);
 app.use('/api/users', usersRouter);
@@ -60,12 +62,18 @@ app.use('/api/notifications', notificationRoutes);
 app.use('/api/attendance', attendanceRouter);
 app.use('/api/branch-settings', branchSettingsRouter);
 app.use('/api/super-admin', superAdminRouter);
+app.use('/api/company', companyRouter);
+app.use('/api/audit-logs', auditLogsRouter);
 
 app.get('/api/network-ip', (req, res) => {
   const os = require('os');
   const nets = os.networkInterfaces();
   let ip = 'localhost';
   for (const name of Object.keys(nets)) {
+    // Skip virtual network adapters (WSL, Hyper-V, VMware, VirtualBox)
+    if (name.toLowerCase().includes('veth') || name.toLowerCase().includes('wsl') || name.toLowerCase().includes('vmware') || name.toLowerCase().includes('virtual')) {
+      continue;
+    }
     for (const net of nets[name]) {
       if (net.family === 'IPv4' && !net.internal) {
         ip = net.address;

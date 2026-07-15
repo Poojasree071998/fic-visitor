@@ -13,7 +13,8 @@ import {
   Shield,
   Activity,
   X,
-  Clock
+  Clock,
+  CreditCard
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
@@ -21,22 +22,29 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
   const role = user?.role || 'Visitor';
 
   const allNavItems = [
-    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['SaaS Super Admin', 'Super Admin', 'MD', 'Admin', 'Security', 'Visitor'] },
-    { name: 'All Visitors', path: '/visitors', icon: <Users size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security'] },
+    { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['SaaS Super Admin', 'Super Admin', 'MD', 'Admin', 'Security', 'Visitor', 'HR'] },
+    { name: 'All Visitors', path: '/visitors', icon: <Users size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security', 'HR'] },
     { name: 'User Management', path: '/users', icon: <Shield size={20} />, roles: ['Super Admin'] },
-    { name: 'Approvals', path: '/approvals', icon: <CheckSquare size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },
-    { name: 'Blacklist', path: '/blacklist', icon: <Ban size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security'] },
-    { name: 'Reports', path: '/reports', icon: <FileText size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },
-    { name: 'Attendance', path: '/attendance', icon: <Clock size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },
-    { name: 'Settings', path: '/settings', icon: <Settings size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Visitor'] },
+    { name: 'Approvals', path: '/approvals', icon: <CheckSquare size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
+    { name: 'Blacklist', path: '/blacklist', icon: <Ban size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security', 'HR'] },
+    { name: 'Reports', path: '/reports', icon: <FileText size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
+    { name: 'Subscription', path: '/subscription', icon: <CreditCard size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
+    { name: 'Attendance', path: '/attendance', icon: <Clock size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
+    { name: 'Audit Logs', path: '/audit-logs', icon: <Activity size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
+    { name: 'Settings', path: '/settings', icon: <Settings size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Visitor', 'HR'] },
   ];
 
-  const navItems = allNavItems.filter(item => item.roles.includes(role));
+
+  let navItems = allNavItems.filter(item => item.roles.includes(role));
+  
+  if (user?.isExpired && role !== 'SaaS Super Admin') {
+    navItems = navItems.filter(item => item.name === 'Subscription');
+  }
 
   return (
     <aside className={`w-64 bg-[var(--color-brand-indigo)] text-white h-screen fixed top-0 left-0 flex flex-col shadow-xl z-20 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
       <div className="h-16 flex items-center justify-between px-6 border-b border-white/10 shrink-0">
-        <h1 className="text-2xl font-bold tracking-wider">FIC VMS</h1>
+        <h1 className="text-xl font-bold tracking-wider truncate">{user?.companyName || 'FIC VMS'}</h1>
         <button 
           className="md:hidden text-white/70 hover:text-white"
           onClick={() => setIsOpen(false)}

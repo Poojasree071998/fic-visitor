@@ -166,8 +166,7 @@ const UserForm = () => {
                   <option value="MD">MD (Managing Director)</option>
                   <option value="Admin">Admin (Branch Administrator)</option>
                   <option value="Security">Security (Gate access only)</option>
-                  <option value="Student">Student</option>
-                  <option value="Staff">Staff</option>
+                  <option value="HR">HR</option>
                 </select>
               </div>
 

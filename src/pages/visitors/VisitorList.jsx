@@ -11,7 +11,7 @@ import { QRCodeSVG } from 'qrcode.react';
 const VisitorList = () => {
   const { visitors, allVisitors, updateVisitorStatus, updateVisitorTracking, updateVisitor, networkIp } = useVisitors();
   const { zones } = useZones();
-  const { activeBranch } = useBranch();
+  const { activeBranch, branches } = useBranch();
   const { addNotification } = useNotification();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -27,12 +27,48 @@ const VisitorList = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('');
 
+  const [hosts, setHosts] = useState([
+    'Vaideeswari (Admin)',
+    'Adithiya (Senior HR)',
+    'Sandhiya (HR Executive)',
+    'Monikashree (HR Executive)',
+    'Priyadharshini (HR Executive)',
+    'Agila (IT Team)',
+    'Avinash (Director MD Sir)',
+    'Sandeep (Chief Executive Officer Sir)',
+    'Srisha (SBI)'
+  ]);
+
+  React.useEffect(() => {
+    const fetchHosts = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || `http://${networkIp || window.location.hostname}:5000`;
+        const res = await fetch(`${API_URL}/api/users`);
+        if (res.ok) {
+          const data = await res.json();
+          const dbHosts = data
+            .filter(u => u.status !== 'Inactive' && u.status !== 'Blocked' && u.role !== 'Visitor' && u.role !== 'Security')
+            .map(u => `${u.name} (${u.role})`);
+          
+          setHosts(prev => {
+            const merged = new Set([...dbHosts, ...prev]);
+            return Array.from(merged);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch hosts from DB:', err);
+      }
+    };
+    fetchHosts();
+  }, [networkIp]);
+
+
   // Handle URL params for filtering
   React.useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('filter') === 'checked-in') {
       setStatusFilter('Checked In');
-      setDateFilter(new Date().toISOString().split('T')[0]);
+      // Intentionally not setting dateFilter to allow all-time QR Scans
     }
   }, [location]);
 
@@ -336,10 +372,10 @@ const VisitorList = () => {
                       <tr key={index} className="hover:bg-slate-50 transition-colors">
                         <td className="px-4 py-3 font-medium text-gray-900">{log.zoneName}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {new Date(log.entryTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(log.entryTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
-                          {log.exitTime ? new Date(log.exitTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : <span className="text-green-600 font-semibold">Active</span>}
+                          {log.exitTime ? new Date(log.exitTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : <span className="text-green-600 font-semibold">Active</span>}
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">
                           {log.durationMinutes !== undefined ? `${log.durationMinutes} min` : '-'}
@@ -462,6 +498,9 @@ const VisitorList = () => {
                 hostName: formData.get('hostName'),
                 purpose: formData.get('purpose')
               };
+              if (formData.has('branch')) {
+                updates.branch = formData.get('branch');
+              }
               const success = await updateVisitor(selectedVisitorEdit.id, updates);
               if (success) {
                 setSelectedVisitorEdit(null);
@@ -476,24 +515,29 @@ const VisitorList = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Mobile Number</label>
                   <input required name="mobileNumber" defaultValue={selectedVisitorEdit.mobileNumber} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-indigo)] outline-none" />
                 </div>
+                {user?.role === 'Super Admin' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Branch</label>
+                    <select required name="branch" defaultValue={selectedVisitorEdit.branch} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-indigo)] outline-none bg-white">
+                      <option value="">Select Branch</option>
+                      {branches.filter(b => b !== 'All Branches').map(branch => (
+                        <option key={branch} value={branch}>{branch}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Host Name</label>
                   <select required name="hostName" defaultValue={selectedVisitorEdit.hostName} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-[var(--color-brand-indigo)] outline-none bg-white">
                     <option value="">Select Host</option>
-                    <option value="Vaideeswari (Admin)">Vaideeswari (Admin)</option>
-                    <option value="Adithiya (Senior HR)">Adithiya (Senior HR)</option>
-                    <option value="Sandhiya (HR Executive)">Sandhiya (HR Executive)</option>
-                    <option value="Monikashree (HR Executive)">Monikashree (HR Executive)</option>
-                    <option value="Priyadharshini (HR Executive)">Priyadharshini (HR Executive)</option>
-                    <option value="Agila (IT Team)">Agila (IT Team)</option>
-                    <option value="Avinash (Director MD Sir)">Avinash (Director MD Sir)</option>
-                    <option value="Sandeep (Chief Executive Officer Sir)">Sandeep (Chief Executive Officer Sir)</option>
-                    <option value="Srisha (SBI)">Srisha (SBI)</option>
-                    {/* Include the current host if it's not in the predefined list */}
-                    {!['Vaideeswari (Admin)', 'Adithiya (Senior HR)', 'Sandhiya (HR Executive)', 'Monikashree (HR Executive)', 'Priyadharshini (HR Executive)', 'Agila (IT Team)', 'Avinash (Director MD Sir)', 'Sandeep (Chief Executive Officer Sir)', 'Srisha (SBI)'].includes(selectedVisitorEdit.hostName) && (
+                    {hosts.map(host => (
+                      <option key={host} value={host}>{host}</option>
+                    ))}
+                    {!hosts.includes(selectedVisitorEdit.hostName) && (
                       <option value={selectedVisitorEdit.hostName}>{selectedVisitorEdit.hostName}</option>
                     )}
                   </select>
+
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Purpose</label>

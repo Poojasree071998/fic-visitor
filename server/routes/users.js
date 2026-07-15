@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const Visitor = require('../models/Visitor');
 const authMiddleware = require('../middleware/authMiddleware');
+const logAction = require('../utils/auditLogger');
 
 router.use(authMiddleware);
 
@@ -92,18 +93,15 @@ router.post('/', async (req, res) => {
     // Enforce Plan Limits for Security Staff role
     if (req.body.role === 'Security') {
       const Company = require('../models/Company');
+      const planLimits = require('../config/plans');
       const company = await Company.findOne({ code: req.companyId });
-      if (company) {
-        const plan = company.subscription;
-        let limit = -1;
-        if (plan === 'Basic') limit = 5;
-        else if (plan === 'Standard') limit = 20;
-
-        if (limit !== -1) {
+      if (company && company.subscription) {
+        const limits = planLimits[company.subscription];
+        if (limits && limits.securityUsers !== -1) {
           const count = await User.countDocuments({ companyId: req.companyId, role: 'Security' });
-          if (count >= limit) {
+          if (count >= limits.securityUsers) {
             return res.status(403).json({ 
-              message: `Plan Limit Exceeded: Your current plan (${plan}) only allows up to ${limit} security staff members. Please upgrade to add more.` 
+              message: `Maximum security users reached. Your current plan (${company.subscription}) only allows up to ${limits.securityUsers} security staff members. Please upgrade your plan.` 
             });
           }
         }
@@ -142,6 +140,9 @@ router.post('/', async (req, res) => {
         io.emit('new_notification', newNotification);
       }
     }
+    
+    // Audit Log
+    await logAction(req, `Added User: ${newUser.name} (${newUser.role})`, 'User Management');
 
     const u = newUser.toJSON();
     delete u.password;
@@ -154,13 +155,100 @@ router.post('/', async (req, res) => {
 // PATCH update user
 router.patch('/:id', async (req, res) => {
   try {
+    const AuditLog = require('../models/AuditLog');
+    const Notification = require('../models/Notification');
+    const oldUser = await User.findOne({ _id: req.params.id, companyId: req.companyId });
+    if (!oldUser) return res.status(404).json({ message: 'User not found' });
+
     const updatedUser = await User.findOneAndUpdate(
       { _id: req.params.id, companyId: req.companyId },
       { $set: req.body },
       { new: true }
     );
-    if (!updatedUser) return res.status(404).json({ message: 'User not found' });
     
+    // Audit & Notifications
+    const performedBy = req.headers['x-user-role'] === 'Super Admin' ? 'SaaS Super Admin' : 'Admin';
+    
+    if (req.body.branch && req.body.branch !== oldUser.branch) {
+      await AuditLog.create({
+        companyId: req.companyId,
+        userId: updatedUser._id,
+        userName: updatedUser.name,
+        action: 'Branch Changed',
+        details: `${updatedUser.name} moved from ${oldUser.branch} to ${updatedUser.branch}`,
+        performedBy
+      });
+
+      // Notification to Super Admin
+      const io = req.app.get('io');
+      if (io) {
+        const superAdminNotif = await Notification.create({
+          companyId: req.companyId,
+          branchId: 'All Branches',
+          type: 'Admin',
+          title: 'User Transfer',
+          message: `User transferred successfully. ${updatedUser.name} moved from ${oldUser.branch} to ${updatedUser.branch}.`,
+          createdBy: performedBy
+        });
+        io.emit('new_notification', superAdminNotif);
+
+        // Notification to New Branch
+        const newBranchNotif = await Notification.create({
+          companyId: req.companyId,
+          branchId: updatedUser.branch,
+          type: 'Admin',
+          title: 'New User Assigned',
+          message: `${updatedUser.name} has been assigned to ${updatedUser.branch} Branch.`,
+          createdBy: performedBy
+        });
+        io.emit('new_notification', newBranchNotif);
+      }
+    }
+
+    if (req.body.status && req.body.status !== oldUser.status) {
+      const isBlocking = req.body.status === 'Blocked';
+      const isUnblocking = oldUser.status === 'Blocked' && req.body.status === 'Active';
+      const reasonText = isBlocking && req.body.statusReason ? ` Reason: ${req.body.statusReason}` : '';
+
+      await AuditLog.create({
+        companyId: req.companyId,
+        userId: updatedUser._id,
+        userName: updatedUser.name,
+        action: isBlocking ? 'Blocked' : 'Status Changed',
+        details: isBlocking 
+          ? `${updatedUser.name} was blocked.${reasonText}` 
+          : `${updatedUser.name} status changed from ${oldUser.status} to ${updatedUser.status}`,
+        performedBy
+      });
+
+      const io = req.app.get('io');
+      if (io) {
+        if (isBlocking) {
+          // Notify Branch Admin
+          const blockNotif = await Notification.create({
+            companyId: req.companyId,
+            branchId: updatedUser.branch,
+            type: 'Security',
+            title: 'Security Account Blocked',
+            message: `Security user ${updatedUser.name} was blocked by Super Admin.${reasonText}`,
+            createdBy: performedBy
+          });
+          io.emit('new_notification', blockNotif);
+        } else if (isUnblocking) {
+          // Notify Branch Admin
+          const unblockNotif = await Notification.create({
+            companyId: req.companyId,
+            branchId: updatedUser.branch,
+            type: 'Security',
+            title: 'Security Account Unblocked',
+            message: `Security user ${updatedUser.name} was unblocked by Super Admin.`,
+            createdBy: performedBy
+          });
+          io.emit('new_notification', unblockNotif);
+        }
+      }
+    }
+
     const u = updatedUser.toJSON();
     delete u.password;
     res.json(u);

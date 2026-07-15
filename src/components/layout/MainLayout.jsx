@@ -2,9 +2,31 @@ import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import { useAuth } from '../../context/AuthContext';
 
 const MainLayout = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth >= 768);
+  const { user } = useAuth();
+
+  const getSubscriptionReminder = () => {
+    if (!user?.subscriptionExpiresAt || user.role === 'SaaS Super Admin') return null;
+    const expiry = new Date(user.subscriptionExpiresAt);
+    const now = new Date();
+    const diffTime = expiry - now;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return null; // handled by isExpired redirect
+    if (diffDays === 0) return 'Your subscription expires today.';
+    if (diffDays === 1) return 'Your subscription expires tomorrow.';
+    if (diffDays === 3) return 'Your subscription expires in 3 days.';
+    if (diffDays === 7) return 'Your subscription expires in 7 days.';
+    if (user?.subscription === 'One Day Trial' && diffDays < 7) {
+       return `Your Free Trial expires in ${diffDays} days.`;
+    }
+    return null;
+  };
+
+  const trialText = getSubscriptionReminder();
 
   return (
     <div className="flex min-h-screen bg-slate-50">
@@ -20,7 +42,15 @@ const MainLayout = () => {
       
       <div className={`flex-1 flex flex-col min-w-0 w-full transition-all duration-300 ease-in-out ${isSidebarOpen ? 'md:ml-64' : 'ml-0'}`}>
         <Header toggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} isSidebarOpen={isSidebarOpen} />
-        <main className="flex-1 p-4 md:p-6 mt-16 overflow-y-auto min-w-0 overflow-x-hidden">
+        
+        {trialText && (
+          <div className="bg-yellow-50 border-b border-yellow-200 mt-16 px-4 py-2 text-center text-yellow-800 text-sm font-medium z-10 flex items-center justify-center space-x-2">
+            <span>⏱️</span>
+            <span>{trialText} Upgrade to unlock full access.</span>
+          </div>
+        )}
+
+        <main className={`flex-1 p-4 md:p-6 ${!trialText ? 'mt-16' : ''} overflow-y-auto min-w-0 overflow-x-hidden`}>
           <Outlet />
         </main>
       </div>

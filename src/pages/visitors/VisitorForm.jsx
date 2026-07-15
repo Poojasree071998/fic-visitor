@@ -5,7 +5,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { useBranch } from '../../context/BranchContext';
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Save, Upload, User, Calendar, FileText, Camera, IdCard, Info, Search, AlertCircle, QrCode, X } from 'lucide-react';
+import { ArrowLeft, Save, Upload, User, Calendar, FileText, Camera, IdCard, Info, Search, AlertCircle, QrCode, X, Ban } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import Webcam from 'react-webcam';
 
@@ -30,6 +30,30 @@ const VisitorForm = () => {
   ]);
   
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
+
+  React.useEffect(() => {
+    const fetchHosts = async () => {
+      try {
+        const API_URL = import.meta.env.VITE_API_URL || `http://${networkIp || window.location.hostname}:5000`;
+        const res = await fetch(`${API_URL}/api/users`);
+        if (res.ok) {
+          const data = await res.json();
+          const dbHosts = data
+            .filter(u => u.status !== 'Inactive' && u.status !== 'Blocked' && u.role !== 'Visitor' && u.role !== 'Security')
+            .map(u => `${u.name} (${u.role})`);
+          
+          setHosts(prev => {
+            const merged = new Set([...dbHosts, ...prev]);
+            return Array.from(merged);
+          });
+        }
+      } catch (err) {
+        console.error('Failed to fetch hosts from DB:', err);
+      }
+    };
+    fetchHosts();
+  }, [networkIp]);
+
   const [newHostName, setNewHostName] = useState('');
   const [existingVisitorMatch, setExistingVisitorMatch] = useState(null);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -54,6 +78,29 @@ const VisitorForm = () => {
 
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [blacklistedVisitor, setBlacklistedVisitor] = useState(null);
+
+  const checkBlacklist = async (mobileNumber) => {
+    try {
+      const API_URL = import.meta.env.VITE_API_URL || `http://${networkIp}:5000`;
+      const response = await fetch(`${API_URL}/api/blacklist/check/${mobileNumber}`, {
+        headers: {
+          'x-company-id': user?.companyId || 'FIC001',
+          'Authorization': user?.token ? `Bearer ${user.token}` : ''
+        }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.isBlacklisted) {
+          setBlacklistedVisitor(data);
+        } else {
+          setBlacklistedVisitor(null);
+        }
+      }
+    } catch (err) {
+      console.error('Error checking blacklist:', err);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -61,6 +108,7 @@ const VisitorForm = () => {
     
     // Check for existing visitor when mobile number is typed
     if (name === 'mobileNumber' && value.length >= 10) {
+      checkBlacklist(value);
       const existing = allVisitors.find(v => v.mobileNumber === value);
       if (existing) {
         setExistingVisitorMatch(existing);
@@ -69,6 +117,7 @@ const VisitorForm = () => {
       }
     } else if (name === 'mobileNumber') {
       setExistingVisitorMatch(null);
+      setBlacklistedVisitor(null);
     }
   };
 
@@ -130,13 +179,15 @@ const VisitorForm = () => {
       addNotification('Action Required', 'Please wait for the photo to finish uploading.', 'warning');
       return;
     }
-    if (isBlacklisted(formData.mobileNumber)) {
-      addNotification('Registration Blocked', 'This mobile number is on the Blacklist.', 'error');
-      return;
-    }
     if (user?.role === 'Super Admin' && !formData.branch && activeBranch === 'All Branches') {
       addNotification('Action Required', 'Please select a branch location.', 'warning');
       return;
+    }
+    
+    let submitStatus = 'Pending';
+    if (blacklistedVisitor || isBlacklisted(formData.mobileNumber)) {
+      submitStatus = 'Rejected';
+      addNotification('Blocked Attempt Logged', 'The blacklisted attempt has been recorded in the security logs.', 'info');
     }
     
     let hostTeam = 'General';
@@ -145,9 +196,9 @@ const VisitorForm = () => {
       hostTeam = match[1].trim();
     }
     
-    const finalData = { ...formData, hostTeam };
+    const finalData = { ...formData, hostTeam, status: submitStatus };
     addVisitor(finalData);
-    navigate('/visitors');
+    navigate(submitStatus === 'Rejected' ? '/dashboard' : '/visitors');
   };
 
   // Reusable input class
@@ -204,6 +255,26 @@ const VisitorForm = () => {
           <p className="text-xs opacity-80 mt-1">Fields marked with an asterisk (*) are mandatory. Once approved, the visitor will automatically receive a QR Code Entry Pass via SMS/Email.</p>
         </div>
       </div>
+
+      {/* Blacklisted Visitor Alert */}
+      {blacklistedVisitor && (
+        <div className="bg-red-50 border-2 border-red-500 rounded-xl p-5 flex flex-col gap-4 items-start justify-between shadow-md animate-in slide-in-from-top-2">
+          <div className="flex gap-3">
+            <AlertCircle className="flex-shrink-0 mt-0.5 text-red-600" size={24} />
+            <div>
+              <p className="font-bold text-red-700 text-lg">🚨 BLOCKED VISITOR DETECTED</p>
+              <p className="text-sm text-red-800 mt-1 font-medium">
+                This mobile number has been blocked by the Super Admin. You cannot register this visitor.
+              </p>
+              {blacklistedVisitor.reason && (
+                <div className="mt-3 bg-red-100 border border-red-200 text-red-800 px-3 py-2 rounded-lg text-sm font-semibold">
+                  Reason: {blacklistedVisitor.reason}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Existing Visitor Alert */}
       {existingVisitorMatch && (
@@ -326,18 +397,7 @@ const VisitorForm = () => {
                   ))}
                 </select>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Number of Visitors *</label>
-                <input 
-                  required 
-                  type="number" 
-                  min="1"
-                  name="visitorCount" 
-                  value={formData.visitorCount} 
-                  onChange={handleChange} 
-                  className={inputClassName} 
-                />
-              </div>
+              {/* Number of Visitors field removed as per request */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Purpose of Visit *</label>
                 <select required name="purpose" value={formData.purpose} onChange={handleChange} className={`${inputClassName} bg-white`}>
@@ -443,10 +503,23 @@ const VisitorForm = () => {
           <button type="button" onClick={() => navigate('/visitors')} className="px-6 py-3 border border-gray-300 text-gray-700 font-bold rounded-lg hover:bg-gray-50 transition-colors">
             Cancel
           </button>
-          <button type="submit" className="px-8 py-3 bg-[var(--color-brand-indigo)] text-white font-bold rounded-lg hover:bg-[var(--color-brand-indigo-light)] transition-colors flex items-center space-x-2 shadow-md">
-            <Save size={20} />
-            <span>Generate Visitor Pass</span>
-          </button>
+          {blacklistedVisitor ? (
+            <button 
+              type="submit" 
+              className="px-8 py-3 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-colors flex items-center space-x-2 shadow-md"
+            >
+              <Ban size={20} />
+              <span>Log Blocked Attempt</span>
+            </button>
+          ) : (
+            <button 
+              type="submit" 
+              className="px-8 py-3 bg-[var(--color-brand-indigo)] text-white font-bold rounded-lg hover:bg-[var(--color-brand-indigo-light)] transition-colors flex items-center space-x-2 shadow-md"
+            >
+              <Save size={20} />
+              <span>Generate Visitor Pass</span>
+            </button>
+          )}
         </div>
       </form>
 

@@ -15,6 +15,23 @@ router.get('/', async (req, res) => {
   }
 });
 
+// GET check if a mobile number is blacklisted
+router.get('/check/:mobileNumber', async (req, res) => {
+  try {
+    const entry = await Blacklist.findOne({ 
+      companyId: req.companyId, 
+      mobileNumber: req.params.mobileNumber 
+    });
+    if (entry) {
+      res.json({ isBlacklisted: true, reason: entry.reason });
+    } else {
+      res.json({ isBlacklisted: false });
+    }
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // POST a new blacklist entry
 router.post('/', async (req, res) => {
   const entry = new Blacklist({ ...req.body, companyId: req.companyId });

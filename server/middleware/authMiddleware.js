@@ -13,14 +13,16 @@ module.exports = async (req, res, next) => {
         return res.status(404).json({ message: 'Company code is invalid' });
       }
 
-      if (company.status !== 'Active' && userRole !== 'SaaS Super Admin') {
+      const isUpgradeRequest = req.path.includes('/request-upgrade') || req.path.includes('/me');
+
+      if (company.status !== 'Active' && userRole !== 'SaaS Super Admin' && !isUpgradeRequest) {
         return res.status(403).json({ 
           message: `Your subscription account status is '${company.status}'. Please contact system administrator.` 
         });
       }
 
       // Check if subscription has expired
-      if (company.subscriptionExpiresAt && new Date() > new Date(company.subscriptionExpiresAt) && userRole !== 'SaaS Super Admin') {
+      if (company.subscriptionExpiresAt && new Date() > new Date(company.subscriptionExpiresAt) && userRole !== 'SaaS Super Admin' && !isUpgradeRequest) {
         return res.status(403).json({ 
           message: `Your subscription has expired on ${new Date(company.subscriptionExpiresAt).toLocaleDateString()}. Please renew to continue.` 
         });
@@ -34,6 +36,19 @@ module.exports = async (req, res, next) => {
 
     req.userId = userId || null;
     req.userRole = userRole || null;
+
+    if (userId && !userId.startsWith('bootstrap-')) {
+      const User = require('../models/User');
+      const userObj = await User.findById(userId);
+      if (userObj) {
+        if (userObj.status === 'Inactive') {
+          return res.status(403).json({ message: 'Your account is inactive and has been deactivated.' });
+        }
+        if (userObj.status === 'Blocked') {
+          return res.status(403).json({ message: 'Your account has been blocked.' });
+        }
+      }
+    }
 
     next();
   } catch (err) {

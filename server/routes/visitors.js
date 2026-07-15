@@ -7,6 +7,7 @@ const Visitor = require('../models/Visitor');
 const VisitorProfile = require('../models/VisitorProfile');
 const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/authMiddleware');
+const logAction = require('../utils/auditLogger');
 
 router.use((req, res, next) => {
   if (req.path.startsWith('/pass/') || req.path === '/upload') {
@@ -137,24 +138,35 @@ router.post('/', async (req, res) => {
   try {
     const { visitorName, mobileNumber, email, companyName, photoUrl } = req.body;
 
-    // Enforce Monthly Visitor Limits (Basic Plan = 500/Month)
+    // Check Blacklist
+    const Blacklist = require('../models/Blacklist');
+    const isBlacklisted = await Blacklist.findOne({ companyId: req.companyId, mobileNumber });
+    if (isBlacklisted) {
+      // Force status to Rejected for security audit logs
+      req.body.status = 'Rejected';
+    }
+
+    // Enforce Monthly Visitor Limits based on Plan
     const Company = require('../models/Company');
+    const planLimits = require('../config/plans');
     const company = await Company.findOne({ code: req.companyId });
-    if (company && company.subscription === 'Basic') {
-      const limit = 500;
-      const startOfMonth = new Date();
-      startOfMonth.setDate(1);
-      startOfMonth.setHours(0, 0, 0, 0);
+    if (company && company.subscription) {
+      const limits = planLimits[company.subscription];
+      if (limits && limits.visitors !== -1) {
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
 
-      const count = await Visitor.countDocuments({
-        companyId: req.companyId,
-        createdAt: { $gte: startOfMonth }
-      });
-
-      if (count >= limit) {
-        return res.status(403).json({ 
-          message: `Monthly Limit Reached: Your current plan (Basic) only allows up to ${limit} visitors per month. Please upgrade to continue registering visitors.` 
+        const count = await Visitor.countDocuments({
+          companyId: req.companyId,
+          createdAt: { $gte: startOfMonth }
         });
+
+        if (count >= limits.visitors) {
+          return res.status(403).json({ 
+            message: `Visitor limit reached. Your current plan (${company.subscription}) only allows up to ${limits.visitors} visitors per month. Please upgrade your subscription.` 
+          });
+        }
       }
     }
 
@@ -227,6 +239,9 @@ router.post('/', async (req, res) => {
     if (io) {
       io.emit('new_notification', notification);
     }
+    
+    // Audit log
+    await logAction(req, `Visitor Registered: ${newVisitor.visitorName}`, 'Visitor');
 
     res.status(201).json(newVisitor);
   } catch (err) {
@@ -280,6 +295,11 @@ router.patch('/:id', async (req, res) => {
           io.emit('new_notification', notification);
         }
       }
+    }
+    
+    // Audit Log for any status change
+    if (req.body.status && oldVisitor && oldVisitor.status !== req.body.status) {
+      await logAction(req, `Visitor Status changed to ${req.body.status}`, 'Visitor');
     }
 
     if (req.body.status === 'Inside' && oldVisitor && oldVisitor.status !== 'Inside') {

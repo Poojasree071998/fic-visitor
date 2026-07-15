@@ -117,11 +117,14 @@ export const VisitorProvider = ({ children }) => {
   }, [allVisitors, activeBranch]);
 
   const addVisitor = async (visitorData) => {
-    // Only Super Admin uses the activeBranch from dropdown.
+    // Only Super Admin uses the activeBranch from dropdown or form.
     // Admin, Security, and MD are locked to their own branch.
-    const userBranch = currentUser && !['Super Admin'].includes(currentUser.role) 
-      ? currentUser.branch 
-      : (activeBranch === 'All Branches' ? 'Chennai' : activeBranch);
+    let userBranch = visitorData.branch;
+    if (!userBranch) {
+      userBranch = currentUser && !['Super Admin'].includes(currentUser.role) 
+        ? currentUser.branch 
+        : (activeBranch === 'All Branches' ? 'Chennai' : activeBranch);
+    }
     
     const newVisitor = {
       ...visitorData,
