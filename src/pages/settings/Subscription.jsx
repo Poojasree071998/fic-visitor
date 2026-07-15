@@ -14,7 +14,7 @@ const Subscription = () => {
 
   const fetchCompanyDetails = async () => {
     try {
-      const url = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/company/me`;
+      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/company/me`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -35,7 +35,7 @@ const Subscription = () => {
   const handleUpgradeRequest = async () => {
     setRequesting(true);
     try {
-      const url = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/company/request-upgrade`;
+      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/company/request-upgrade`;
       const response = await fetch(url, {
         method: 'POST',
         headers: {

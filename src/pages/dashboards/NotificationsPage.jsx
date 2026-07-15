@@ -4,7 +4,7 @@ import { useBranch } from '../../context/BranchContext';
 import { io } from 'socket.io-client';
 import { Search, Filter, Trash2, CheckCircle, BellOff } from 'lucide-react';
 
-const API_URL = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/notifications`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/notifications`;
 
 const NotificationsPage = () => {
   const { user } = useAuth();
@@ -49,7 +49,7 @@ const NotificationsPage = () => {
   useEffect(() => {
     fetchNotifications();
     
-    const socket = io(`${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}`);
+    const socket = io(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}`);
     
     socket.on('new_notification', (notification) => {
       // Basic branch check if applicable

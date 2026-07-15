@@ -19,7 +19,7 @@ const EntryExitLogs = () => {
 
   const postAlert = async (visitor, zoneName) => {
     try {
-      await fetch(`${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/alerts`, {
+      await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/alerts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

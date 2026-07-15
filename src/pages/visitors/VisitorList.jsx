@@ -42,7 +42,7 @@ const VisitorList = () => {
   React.useEffect(() => {
     const fetchHosts = async () => {
       try {
-        const API_URL = import.meta.env.VITE_API_URL || `http://${networkIp || window.location.hostname}:5000`;
+        const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? (window.location.hostname === 'localhost' ? `http://${networkIp}:5000` : '') : '');
         const res = await fetch(`${API_URL}/api/users`);
         if (res.ok) {
           const data = await res.json();
@@ -326,7 +326,7 @@ const VisitorList = () => {
             
             <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm inline-block mb-6">
               <QRCodeSVG 
-                value={`http://${networkIp}:${window.location.port}/pass/${selectedVisitorQR.visitId || selectedVisitorQR.id}`} 
+                value={window.location.hostname === 'localhost' ? `http://${networkIp}:${window.location.port}/pass/${selectedVisitorQR.visitId || selectedVisitorQR.id}` : `${window.location.origin}/pass/${selectedVisitorQR.visitId || selectedVisitorQR.id}`} 
                 size={200}
                 level="H"
                 includeMargin={true}

@@ -4,7 +4,7 @@ import { useNotification } from './NotificationContext';
 import { useAuth } from './AuthContext';
 
 const VisitorContext = createContext(null);
-const API_URL = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/visitors`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/visitors`;
 
 export const VisitorProvider = ({ children }) => {
   const { activeBranch } = useBranch();
@@ -18,7 +18,7 @@ export const VisitorProvider = ({ children }) => {
 
   useEffect(() => {
     // Fetch network IP for mobile QR code scanning
-    fetch(`${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/network-ip`)
+    fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/network-ip`)
       .then(res => res.json())
       .then(data => {
         if (data && data.ip) {

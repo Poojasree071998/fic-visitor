@@ -3,7 +3,7 @@ import { UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 
-const API_URL = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/visitors`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/visitors`;
 
 const TodaysVisitorsCard = () => {
   const { user: currentUser } = useAuth();

@@ -3,7 +3,7 @@ import { useBranch } from '../../context/BranchContext';
 import { useNotification } from '../../context/NotificationContext';
 import { Save, MapPin, Clock, Shield } from 'lucide-react';
 
-const API_URL = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/branch-settings`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/branch-settings`;
 
 const BranchSettings = () => {
   const { branches } = useBranch();

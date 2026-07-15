@@ -10,7 +10,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const url = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/auth/login`;
+      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/auth/login`;
       console.log('Attempting login to:', url);
       
       const response = await fetch(url, {

@@ -6,7 +6,7 @@ import { Bell, User, MapPin, Check, Menu, Trash2, ExternalLink } from 'lucide-re
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = `${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}/api/notifications`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}/api/notifications`;
 
 const Header = ({ toggleSidebar, isSidebarOpen }) => {
   const { user } = useAuth();
@@ -53,7 +53,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
   useEffect(() => {
     fetchNotifications();
     
-    const socket = io(`${import.meta.env.VITE_API_URL || `http://${window.location.hostname}:5000`}`);
+    const socket = io(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : '')}`);
     
     socket.on('new_notification', (notification) => {
       let queryBranch = user?.branch;
