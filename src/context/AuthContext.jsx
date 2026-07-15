@@ -4,11 +4,11 @@ const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('zmvms_user');
+    const saved = localStorage.getItem('zmvms_user') || sessionStorage.getItem('zmvms_user');
     return saved ? JSON.parse(saved) : null;
   });
 
-  const login = async (email, password) => {
+  const login = async (email, password, rememberMe = false) => {
     try {
       const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/auth/login`;
       console.log('Attempting login to:', url);
@@ -23,7 +23,11 @@ export const AuthProvider = ({ children }) => {
 
       if (response.ok) {
         setUser(userData);
-        localStorage.setItem('zmvms_user', JSON.stringify(userData));
+        if (rememberMe) {
+          localStorage.setItem('zmvms_user', JSON.stringify(userData));
+        } else {
+          sessionStorage.setItem('zmvms_user', JSON.stringify(userData));
+        }
         return { success: true };
       }
       return { success: false, message: userData.message || `Server responded with status: ${response.status}` };
@@ -36,6 +40,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('zmvms_user');
+    sessionStorage.removeItem('zmvms_user');
   };
 
   return (

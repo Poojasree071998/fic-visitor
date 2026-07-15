@@ -24,6 +24,7 @@ const Login = () => {
   const [errorMsg, setErrorMsg] = useState('');
   const [isExiting, setIsExiting] = useState(false);
   const [shakeKey, setShakeKey] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false);
   
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const Login = () => {
     setErrorMsg('');
 
     if (mode === 'login') {
-      const result = await login(email, password);
+      const result = await login(email, password, rememberMe);
       if (result.success) {
         setIsLoading(false);
         setIsSuccess(true);
@@ -241,7 +242,7 @@ const Login = () => {
             {mode === 'login' && (
               <div className="flex items-center justify-between text-xs">
                 <label className="flex items-center space-x-2 cursor-pointer">
-                  <input type="checkbox" className="rounded text-[var(--color-brand-indigo)] focus:ring-[var(--color-brand-indigo)]" />
+                  <input type="checkbox" checked={rememberMe} onChange={(e) => setRememberMe(e.target.checked)} className="rounded text-[var(--color-brand-indigo)] focus:ring-[var(--color-brand-indigo)]" />
                   <span className="text-gray-600">Remember me</span>
                 </label>
                 <a href="#" className="text-[var(--color-brand-indigo)] hover:text-indigo-800 font-semibold transition-colors">
