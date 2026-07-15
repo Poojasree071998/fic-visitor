@@ -195,7 +195,9 @@ const VisitorList = () => {
                 <th className="px-6 py-4 font-medium">Date</th>
                 <th className="px-6 py-4 font-medium">Current Zone</th>
                 <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                {user?.role !== 'HR' && (
+                  <th className="px-6 py-4 font-medium text-right">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -249,48 +251,50 @@ const VisitorList = () => {
                        visitor.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="relative inline-block">
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.nativeEvent.stopImmediatePropagation();
-                          setOpenDropdownId(openDropdownId === visitor.id ? null : visitor.id);
-                        }}
-                        className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors"
-                      >
-                        <MoreVertical size={18} />
-                      </button>
-                      
-                      {openDropdownId === visitor.id && (
-                        <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl border border-gray-200 z-50">
-                          <div className="py-1">
-                            <button onClick={() => { setSelectedVisitorEdit(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 font-medium hover:bg-slate-50 flex items-center gap-2">
-                              <Edit size={14} /> Edit Details
-                            </button>
-                            {user?.role !== 'Security' && (
-                              <>
-                                <button onClick={() => { updateVisitorStatus(visitor.id, 'Inside'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-slate-50 border-t border-gray-100">Mark as Inside</button>
-                                <button onClick={() => { updateVisitorStatus(visitor.id, 'Exited'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-slate-50">Mark as Exited</button>
-                                <button onClick={() => { setSelectedVisitorUpdateZone(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-indigo-600 font-medium hover:bg-slate-50 border-t border-gray-100">Update Zone</button>
-                                <button onClick={() => { updateVisitorStatus(visitor.id, 'Approved'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-slate-50 border-t border-gray-100">Approve</button>
-                                <button onClick={() => { updateVisitorStatus(visitor.id, 'Rejected'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50">Reject</button>
-                                <button onClick={() => { setSelectedVisitorHistory(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-slate-50 border-t border-gray-100">
-                                  View Zone History
-                                </button>
-                              </>
-                            )}
-                            <button onClick={() => { setSelectedVisitorQR(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-slate-50">
-                              View QR Pass
-                            </button>
-                            <button onClick={() => { navigate(`/visitors/returning?mobile=${visitor.mobileNumber}`); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm font-bold text-[var(--color-brand-indigo)] hover:bg-indigo-50 border-t border-indigo-100">
-                              Schedule Return Visit
-                            </button>
+                  {user?.role !== 'HR' && (
+                    <td className="px-6 py-4 text-right">
+                      <div className="relative inline-block">
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            e.nativeEvent.stopImmediatePropagation();
+                            setOpenDropdownId(openDropdownId === visitor.id ? null : visitor.id);
+                          }}
+                          className="text-gray-400 hover:text-gray-600 p-1 rounded-md hover:bg-gray-100 transition-colors"
+                        >
+                          <MoreVertical size={18} />
+                        </button>
+                        
+                        {openDropdownId === visitor.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl border border-gray-200 z-50">
+                            <div className="py-1">
+                              <button onClick={() => { setSelectedVisitorEdit(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 font-medium hover:bg-slate-50 flex items-center gap-2">
+                                <Edit size={14} /> Edit Details
+                              </button>
+                              {user?.role !== 'Security' && (
+                                <>
+                                  <button onClick={() => { updateVisitorStatus(visitor.id, 'Inside'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-slate-50 border-t border-gray-100">Mark as Inside</button>
+                                  <button onClick={() => { updateVisitorStatus(visitor.id, 'Exited'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-slate-50">Mark as Exited</button>
+                                  <button onClick={() => { setSelectedVisitorUpdateZone(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-indigo-600 font-medium hover:bg-slate-50 border-t border-gray-100">Update Zone</button>
+                                  <button onClick={() => { updateVisitorStatus(visitor.id, 'Approved'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-slate-50 border-t border-gray-100">Approve</button>
+                                  <button onClick={() => { updateVisitorStatus(visitor.id, 'Rejected'); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50">Reject</button>
+                                  <button onClick={() => { setSelectedVisitorHistory(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-slate-50 border-t border-gray-100">
+                                    View Zone History
+                                  </button>
+                                </>
+                              )}
+                              <button onClick={() => { setSelectedVisitorQR(visitor); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-slate-50">
+                                View QR Pass
+                              </button>
+                              <button onClick={() => { navigate(`/visitors/returning?mobile=${visitor.mobileNumber}`); setOpenDropdownId(null); }} className="block w-full text-left px-4 py-2 text-sm font-bold text-[var(--color-brand-indigo)] hover:bg-indigo-50 border-t border-indigo-100">
+                                Schedule Return Visit
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  </td>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
               
