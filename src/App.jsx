@@ -87,11 +87,11 @@ const AppRoutes = () => {
         <Route path="live-monitoring" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><LiveMonitoring /></ProtectedRoute>} />
         <Route path="zones" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><ZoneList /></ProtectedRoute>} />
         <Route path="tracking" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><EntryExitLogs /></ProtectedRoute>} />
-        <Route path="attendance" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'HR']}><AttendanceLog /></ProtectedRoute>} />
-        <Route path="blacklist" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><BlacklistList /></ProtectedRoute>} />
-        <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'HR']}><ReportsDashboard /></ProtectedRoute>} />
-        <Route path="subscription" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'HR']}><Subscription /></ProtectedRoute>} />
-        <Route path="audit-logs" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'HR']}><AuditLogs /></ProtectedRoute>} />
+        <Route path="attendance" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><AttendanceLog /></ProtectedRoute>} />
+        <Route path="blacklist" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security']}><BlacklistList /></ProtectedRoute>} />
+        <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><ReportsDashboard /></ProtectedRoute>} />
+        <Route path="subscription" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><Subscription /></ProtectedRoute>} />
+        <Route path="audit-logs" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><AuditLogs /></ProtectedRoute>} />
         <Route path="settings" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Visitor', 'HR']}><Settings /></ProtectedRoute>} />
 
       </Route>

@@ -26,11 +26,11 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { name: 'All Visitors', path: '/visitors', icon: <Users size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security', 'HR'] },
     { name: 'User Management', path: '/users', icon: <Shield size={20} />, roles: ['Super Admin'] },
     { name: 'Approvals', path: '/approvals', icon: <CheckSquare size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
-    { name: 'Blacklist', path: '/blacklist', icon: <Ban size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security', 'HR'] },
-    { name: 'Reports', path: '/reports', icon: <FileText size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
-    { name: 'Subscription', path: '/subscription', icon: <CreditCard size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
-    { name: 'Attendance', path: '/attendance', icon: <Clock size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
-    { name: 'Audit Logs', path: '/audit-logs', icon: <Activity size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
+    { name: 'Blacklist', path: '/blacklist', icon: <Ban size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security'] },
+    { name: 'Reports', path: '/reports', icon: <FileText size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },
+    { name: 'Subscription', path: '/subscription', icon: <CreditCard size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },
+    { name: 'Attendance', path: '/attendance', icon: <Clock size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },
+    { name: 'Audit Logs', path: '/audit-logs', icon: <Activity size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },
     { name: 'Settings', path: '/settings', icon: <Settings size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Visitor', 'HR'] },
   ];
 
