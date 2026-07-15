@@ -85,6 +85,15 @@ app.get('/api/network-ip', (req, res) => {
   res.json({ ip });
 });
 
+// Serve frontend static files in production
+const path = require('path');
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// Catch-all route to serve the React app for any non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+});
+
 // Start server
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
