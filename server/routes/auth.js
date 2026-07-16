@@ -12,24 +12,24 @@ router.post('/login', async (req, res) => {
       return res.status(400).json({ message: 'Email and password are required' });
     }
 
-    // Special hardcoded bootstrap admin to prevent lockout
-    if (email === 'saas@fic.com' && password === 'saas123') {
-      return res.json({ id: 'bootstrap-saas', name: 'SaaS Platform Owner', email: 'saas@fic.com', role: 'SaaS Super Admin', branch: 'All Branches', companyId: 'SYSTEM', companyName: 'System Administration' });
-    }
-    if (email === 'sandeep@gmail.com' && password === 'sandeep') {
-      return res.json({ id: 'bootstrap-admin', name: 'Sandeep', email: 'sandeep@gmail.com', role: 'Super Admin', branch: 'All Branches', companyId: 'FIC001', companyName: 'FIC Group' });
-    }
-    if (email === 'vaidee@gmail.com' && password === 'vaidee') {
-      return res.json({ id: 'bootstrap-vaidee', name: 'Vaideeswari', email: 'vaidee@gmail.com', role: 'Admin', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
-    }
-    if (email === 'sabari@gmail.com' && password === 'sabari') {
-      return res.json({ id: 'bootstrap-sabari', name: 'Sabari', email: 'sabari@gmail.com', role: 'Security', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
-    }
-
     // Find user in MongoDB
     const user = await User.findOne({ email: email.toLowerCase() });
     
     if (!user) {
+      // Special hardcoded bootstrap admin to prevent lockout if DB is wiped/missing users
+      if (email === 'saas@fic.com' && password === 'saas123') {
+        return res.json({ id: 'bootstrap-saas', name: 'SaaS Platform Owner', email: 'saas@fic.com', role: 'SaaS Super Admin', branch: 'All Branches', companyId: 'SYSTEM', companyName: 'System Administration' });
+      }
+      if (email === 'sandeep@gmail.com' && password === 'sandeep') {
+        return res.json({ id: 'bootstrap-admin', name: 'Sandeep', email: 'sandeep@gmail.com', role: 'Super Admin', branch: 'All Branches', companyId: 'FIC001', companyName: 'FIC Group' });
+      }
+      if (email === 'vaidee@gmail.com' && password === 'vaidee') {
+        return res.json({ id: 'bootstrap-vaidee', name: 'Vaideeswari', email: 'vaidee@gmail.com', role: 'Admin', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
+      }
+      if (email === 'sabari@gmail.com' && password === 'sabari') {
+        return res.json({ id: 'bootstrap-sabari', name: 'Sabari', email: 'sabari@gmail.com', role: 'Security', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
+      }
+
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
