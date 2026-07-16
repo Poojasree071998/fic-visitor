@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { Building, Users, UserCheck, CreditCard, Calendar, Activity, Check, X, ShieldAlert, Sparkles, Plus, AlertCircle, RefreshCw, Eye, EyeOff } from 'lucide-react';
 
-const DashboardCard = ({ title, value, icon: Icon, colorClass, subtitle }) => (
-  <div className="bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300">
+const DashboardCard = ({ title, value, icon: Icon, colorClass, subtitle, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white rounded-xl shadow-md border border-gray-200 p-6 flex items-center space-x-4 transition-transform hover:-translate-y-1 hover:shadow-lg duration-300 ${onClick ? 'cursor-pointer' : ''}`}
+  >
     <div className={`w-14 h-14 rounded-full flex items-center justify-center ${colorClass}`}>
       <Icon size={24} />
     </div>
@@ -337,24 +340,28 @@ const SaaSPlatformDashboard = () => {
           value={analytics ? analytics.totalCompanies : '-'} 
           icon={Building} 
           colorClass="bg-blue-50 text-blue-600 border border-blue-100" 
+          onClick={() => setActiveTab('Companies')}
         />
         <DashboardCard 
           title="Active Subscriptions" 
           value={analytics ? analytics.activeCompanies : '-'} 
           icon={UserCheck} 
           colorClass="bg-green-50 text-green-600 border border-green-100" 
+          onClick={() => setActiveTab('Subscriptions')}
         />
         <DashboardCard 
           title="Expired Subscriptions" 
           value={analytics ? analytics.inactiveCompanies : '-'} 
           icon={ShieldAlert} 
           colorClass="bg-red-50 text-red-600 border border-red-100" 
+          onClick={() => setActiveTab('Subscriptions')}
         />
         <DashboardCard 
           title="Monthly Revenue" 
           value={analytics ? `₹${analytics.monthlyRevenue.toLocaleString('en-IN')}` : '-'} 
           icon={CreditCard} 
           colorClass="bg-indigo-50 text-indigo-600 border border-indigo-100" 
+          onClick={() => setActiveTab('Payments')}
         />
       </div>
 
