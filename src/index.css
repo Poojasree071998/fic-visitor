@@ -107,22 +107,39 @@ body {
     display: none !important;
   }
   
-  /* Reset margins for main content */
-  .md\:ml-64, main {
-    margin-left: 0 !important;
-    margin-top: 0 !important;
+  /* Reset margins and layouts for main content and ALL parents */
+  body, html, #root, .min-h-screen, .h-screen, main {
+    display: block !important;
+    height: auto !important;
+    min-height: 0 !important;
+    max-height: none !important;
     overflow: visible !important;
+    position: static !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: white !important;
+    color: black !important;
   }
   
-  /* Ensure background is white and text is black */
-  body, html {
-    background-color: white !important;
-    height: auto !important;
-    overflow: visible !important;
+  /* Reset specific layout classes that break printing */
+  .md\:ml-64 {
+    margin-left: 0 !important;
+  }
+  
+  /* Ensure all content within the dashboard is visible (excluding hidden) */
+  .animate-in, .fade-in {
+    opacity: 1 !important;
+    animation: none !important;
+    visibility: visible !important;
+  }
+  
+  /* Hide elements that shouldn't be printed (tabs, buttons) */
+  .print\:hidden {
+    display: none !important;
   }
   
   /* Fix table clipping */
-  .overflow-x-auto, .overflow-y-auto {
+  .overflow-x-auto, .overflow-y-auto, .overflow-hidden {
     overflow: visible !important;
   }
 }
