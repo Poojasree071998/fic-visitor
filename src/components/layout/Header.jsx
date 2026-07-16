@@ -137,11 +137,6 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
           <h2 className="text-xl font-semibold text-gray-800">
             Welcome back, {user?.name || 'User'}
           </h2>
-          {user?.companyName && (
-            <span className="text-xs font-bold text-[var(--color-brand-indigo)] uppercase tracking-wider">
-              {user.companyName}
-            </span>
-          )}
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2 bg-slate-50 px-2 sm:px-3 py-1.5 rounded-lg border border-gray-200">
