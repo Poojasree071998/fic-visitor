@@ -66,6 +66,7 @@ const ReportsDashboard = () => {
 
     return {
       "Visitor": v.visitorName,
+      "Host": v.hostName || 'N/A',
       "Branch": v.branch,
       "Purpose": v.purpose,
       "Entry": v.entryTime || 'N/A',
