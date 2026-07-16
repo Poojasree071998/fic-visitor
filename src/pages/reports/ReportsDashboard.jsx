@@ -71,7 +71,8 @@ const ReportsDashboard = () => {
       "Entry": v.entryTime || 'N/A',
       "Exit": displayExitTime,
       "Time Spent": calculateTimeSpent(v.visitDate, v.entryTime, v.exitTime, v.status),
-      "Status": v.status
+      "Status": v.status,
+      "Notes": [v.hostNotes, v.remarks].filter(Boolean).join(' | ') || '-'
     };
   });
 
