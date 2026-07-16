@@ -28,6 +28,25 @@ const TodaysVisitorsCard = () => {
       const response = await fetch(fetchUrl);
       if (response.ok) {
         const result = await response.json();
+        
+        // Aggregate to prevent duplicate names due to spacing/case differences (e.g. 'Name (HR)' vs 'Name(HR)')
+        const aggregatedBreakdown = {};
+        (result.teamBreakdown || []).forEach(item => {
+          const rawName = item.hostName || item.team || 'Unknown';
+          const displayKey = rawName.split('(')[0].trim();
+          const key = displayKey.toLowerCase();
+          
+          if (!aggregatedBreakdown[key]) {
+             aggregatedBreakdown[key] = { displayKey, count: 0 };
+          }
+          aggregatedBreakdown[key].count += (item.count || 1);
+        });
+        
+        result.teamBreakdown = Object.values(aggregatedBreakdown).map(v => ({
+           hostName: v.displayKey,
+           count: v.count
+        })).sort((a, b) => b.count - a.count);
+
         setData(result);
       }
     } catch (err) {
