@@ -109,8 +109,8 @@ const ReportsDashboard = () => {
     };
     
     return (
-      <div className="overflow-x-auto print:overflow-visible">
-        <table className="w-full text-left border-collapse print:w-full">
+      <div className="overflow-x-auto print:overflow-visible print:block print:opacity-100 print:w-full">
+        <table className="w-full text-left border-collapse print:w-full print:table print:opacity-100 print:visible">
           <thead>
             <tr className="bg-slate-50 text-gray-500 text-xs uppercase tracking-wider print:text-[10px]">
               {headers.map(h => <th key={h} className={`px-6 py-4 font-medium align-top ${getColumnClass(h)}`}>{h}</th>)}
@@ -145,7 +145,7 @@ const ReportsDashboard = () => {
   const checkedOutVisitors = filteredVisitors.filter(v => ['Exited', 'Completed'].includes(v.status)).length;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 print:animate-none print-friendly">
+    <div className="space-y-6 animate-in fade-in duration-500 print:animate-none print:opacity-100 print:block print:visible print-friendly">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">System Reports</h1>
@@ -230,7 +230,7 @@ const ReportsDashboard = () => {
         )}
 
         {activeTab === 'visitor' && (
-          <div className="p-0">
+          <div className="p-0 print:block print:visible print:opacity-100 print:w-full">
             {renderTable(visitorReportData)}
           </div>
         )}
