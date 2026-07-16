@@ -124,13 +124,6 @@ const ApprovalList = () => {
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex items-center justify-end space-x-2">
-                      <button 
-                        onClick={() => navigate(`/approvals/${visitor.id}`)}
-                        className="p-1.5 text-gray-500 hover:text-[var(--color-brand-indigo)] hover:bg-indigo-50 rounded transition-colors"
-                        title="View Details"
-                      >
-                        <Eye size={18} />
-                      </button>
                       
                       {['Pending', 'Hold'].includes(visitor.status) && (
                         <>
