@@ -49,7 +49,7 @@ router.get('/companies', async (req, res) => {
 // PATCH update company details
 router.patch('/companies/:id', async (req, res) => {
   try {
-    const { subscription, status, subscriptionExpiresAt, durationDays } = req.body;
+    const { name, subscription, status, subscriptionExpiresAt, durationDays } = req.body;
     const comp = await Company.findById(req.params.id);
     if (!comp) return res.status(404).json({ message: 'Company not found' });
 
@@ -57,6 +57,10 @@ router.patch('/companies/:id', async (req, res) => {
     let subscriptionChanged = false;
     let oldPlan = comp.subscription;
     let newExpiry = subscriptionExpiresAt ? new Date(subscriptionExpiresAt) : comp.subscriptionExpiresAt;
+
+    if (name !== undefined && comp.name !== name) {
+      comp.name = name;
+    }
 
     if (subscription !== undefined && comp.subscription !== subscription) {
       comp.subscription = subscription;
