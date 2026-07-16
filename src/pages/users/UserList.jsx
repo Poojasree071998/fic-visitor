@@ -287,6 +287,13 @@ const UserList = () => {
                         >
                           <Edit size={14} /> Edit
                         </button>
+                        <button 
+                          onClick={() => deleteUser(u.id || u._id)}
+                          className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                          title="Delete User"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </td>
                   </tr>
