@@ -101,7 +101,7 @@ const ApprovalList = () => {
                 <th className="px-6 py-4 font-medium">Host</th>
                 <th className="px-6 py-4 font-medium">Purpose & Date</th>
                 <th className="px-6 py-4 font-medium">Status</th>
-                <th className="px-6 py-4 font-medium text-right">Actions</th>
+                {user?.role !== 'HR' && <th className="px-6 py-4 font-medium text-right">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -122,33 +122,35 @@ const ApprovalList = () => {
                       <p className="text-[10px] text-gray-400 mt-1">by {visitor.approvedBy}</p>
                     )}
                   </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      
-                      {['Pending', 'Hold'].includes(visitor.status) && (
-                        <>
-                          <button 
-                            onClick={() => openModal(visitor, 'Approve')}
-                            className="px-3 py-1.5 text-xs font-semibold bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 rounded-md transition-colors"
-                          >
-                            Approve
-                          </button>
-                          <button 
-                            onClick={() => openModal(visitor, 'Hold')}
-                            className="px-3 py-1.5 text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 rounded-md transition-colors"
-                          >
-                            Hold
-                          </button>
-                          <button 
-                            onClick={() => openModal(visitor, 'Reject')}
-                            className="px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-md transition-colors"
-                          >
-                            Reject
-                          </button>
-                        </>
-                      )}
-                    </div>
-                  </td>
+                  {user?.role !== 'HR' && (
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        
+                        {['Pending', 'Hold'].includes(visitor.status) && (
+                          <>
+                            <button 
+                              onClick={() => openModal(visitor, 'Approve')}
+                              className="px-3 py-1.5 text-xs font-semibold bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 rounded-md transition-colors"
+                            >
+                              Approve
+                            </button>
+                            <button 
+                              onClick={() => openModal(visitor, 'Hold')}
+                              className="px-3 py-1.5 text-xs font-semibold bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 rounded-md transition-colors"
+                            >
+                              Hold
+                            </button>
+                            <button 
+                              onClick={() => openModal(visitor, 'Reject')}
+                              className="px-3 py-1.5 text-xs font-semibold bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 rounded-md transition-colors"
+                            >
+                              Reject
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  )}
                 </tr>
               ))}
               
