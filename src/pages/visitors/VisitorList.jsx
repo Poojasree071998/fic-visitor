@@ -27,30 +27,15 @@ const VisitorList = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [dateFilter, setDateFilter] = useState('');
 
-  const [hosts, setHosts] = useState([]);
-
-  React.useEffect(() => {
-    const fetchHosts = async () => {
-      try {
-        const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? (window.location.hostname === 'localhost' ? `http://${networkIp}:5000` : 'https://zone-monitor.onrender.com') : '');
-        const res = await fetch(`${API_URL}/api/users`);
-        if (res.ok) {
-          const data = await res.json();
-          const dbHosts = data
-            .filter(u => u.status !== 'Inactive' && u.status !== 'Blocked' && u.role !== 'Visitor' && u.role !== 'Security')
-            .map(u => `${u.name} (${u.role})`);
-          
-          setHosts(prev => {
-            const merged = new Set([...dbHosts, ...prev]);
-            return Array.from(merged);
-          });
-        }
-      } catch (err) {
-        console.error('Failed to fetch hosts from DB:', err);
-      }
-    };
-    fetchHosts();
-  }, [networkIp]);
+  const [hosts, setHosts] = useState([
+    'R.SANDHIYA(HR)',
+    'MONIKA SHREE(HR)',
+    'SANDEEP(CEO SIR)',
+    'AVINASH(MD SIR)',
+    'SABARI(ADMIN)',
+    'VIJI(ADMIN)',
+    'AGILA(IT)'
+  ]);
 
 
   // Handle URL params for filtering
