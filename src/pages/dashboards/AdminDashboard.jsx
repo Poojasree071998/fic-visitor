@@ -157,7 +157,7 @@ const AdminDashboard = () => {
                   className="w-full bg-[#1E1B6E] rounded-t-sm transition-all duration-500 relative group-hover:bg-indigo-700"
                   style={{ height: `${(data.visitors / maxTrend) * 100}%` }}
                 >
-                  <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     {data.visitors}
                   </span>
                 </div>
@@ -218,11 +218,14 @@ const AdminDashboard = () => {
                 <tr key={visitor.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{visitor.visitorName}</td>
                   <td className="px-6 py-4 font-bold text-gray-700 text-center">{visitor.visitorCount || 1}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{visitor.hostName}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{visitor.branch}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600">{visitor.purpose}</td>
                   <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{visitor.entryTime || '-'}</div>
                     <div className="text-xs text-gray-500">{visitor.visitDate || '-'}</div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{visitor.exitTime || '-'}</td>
+                  <td className="px-6 py-4 text-sm text-gray-600 font-mono">{visitor.exitTime || '-'}</td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-800">{calculateTimeSpent(visitor.visitDate, visitor.entryTime, visitor.exitTime, visitor.status)}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-semibold ${

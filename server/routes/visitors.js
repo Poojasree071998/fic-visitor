@@ -50,20 +50,11 @@ router.get('/todays-summary', async (req, res) => {
   try {
     const { branchId, date } = req.query;
 
-    const targetDate = date ? new Date(date) : new Date();
-    
-    const startOfDay = new Date(targetDate);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(targetDate);
-    endOfDay.setHours(23, 59, 59, 999);
+    const targetDateStr = date ? date : new Date().toISOString().split('T')[0];
 
     const matchStage = {
       companyId: req.companyId,
-      createdAt: {
-        $gte: startOfDay,
-        $lte: endOfDay,
-      }
+      visitDate: targetDateStr
     };
 
     if (req.userRole === 'Security' || req.userRole === 'Admin' || req.userRole === 'MD') {

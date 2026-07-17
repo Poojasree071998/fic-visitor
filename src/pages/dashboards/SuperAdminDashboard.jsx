@@ -267,19 +267,23 @@ const SuperAdminDashboard = () => {
                   <th className="px-6 py-4 font-medium">Visitor Name</th>
                   <th className="px-6 py-4 font-medium text-center">Group Size</th>
                   <th className="px-6 py-4 font-medium">Host</th>
+                  <th className="px-6 py-4 font-medium">Branch</th>
+                  <th className="px-6 py-4 font-medium">Purpose</th>
                   <th className="px-6 py-4 font-medium">Entry Time</th>
                   <th className="px-6 py-4 font-medium">Exit Time</th>
                   <th className="px-6 py-4 font-medium">Status</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
-                {[...visitors].reverse().slice(0, 10).map((visitor) => {
+                {[...visitors].reverse().slice(0, 50).map((visitor) => {
                   const restricted = isRestricted(visitor.currentZone);
                   return (
                     <tr key={visitor.id} className={`transition-colors ${restricted ? 'bg-red-50 hover:bg-red-100' : 'hover:bg-slate-50/50'}`}>
                       <td className="px-6 py-4 font-medium text-gray-900">{visitor.visitorName}</td>
                       <td className="px-6 py-4 font-bold text-gray-700 text-center">{visitor.visitorCount || 1}</td>
                       <td className="px-6 py-4 text-sm text-gray-600">{visitor.hostName}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{visitor.branch}</td>
+                      <td className="px-6 py-4 text-sm text-gray-600">{visitor.purpose}</td>
                       <td className="px-6 py-4">
                         <div className="text-sm font-medium text-gray-900">{visitor.entryTime || '-'}</div>
                         <div className="text-xs text-gray-500">{visitor.visitDate || '-'}</div>
@@ -348,7 +352,7 @@ const SuperAdminDashboard = () => {
                   className="w-full bg-[#1E1B6E] rounded-t-sm transition-all duration-500 relative group-hover:bg-indigo-700"
                   style={{ height: `${(data.visitors / maxTrend) * 100}%` }}
                 >
-                  <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     {data.visitors}
                   </span>
                 </div>

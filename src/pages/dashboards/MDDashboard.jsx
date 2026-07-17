@@ -151,7 +151,7 @@ const MDDashboard = () => {
                   className="w-full bg-[#1E1B6E] rounded-t-sm transition-all duration-500 relative group-hover:bg-indigo-700"
                   style={{ height: `${(data.visitors / maxTrend) * 100}%` }}
                 >
-                  <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-xs font-bold text-gray-700 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
                     {data.visitors}
                   </span>
                 </div>
@@ -203,7 +203,7 @@ const MDDashboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {[...visitors].reverse().slice(0, 5).map((visitor) => (
+              {[...visitors].reverse().slice(0, 50).map((visitor) => (
                 <tr key={visitor.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4 font-medium text-gray-900">{visitor.visitorName}</td>
                   <td className="px-6 py-4 text-sm text-gray-600">{visitor.entryTime || '-'}</td>
