@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import { ShieldAlert, CheckCircle, CreditCard, Loader2, X } from 'lucide-react';
 
 const SubscriptionModals = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, updateUser } = useAuth();
   
   // lock, choose_plan, payment, success
   const [mode, setMode] = useState(user?.isExpired && user?.role !== 'SaaS Super Admin' ? 'lock' : 'none');
@@ -67,11 +67,14 @@ const SubscriptionModals = () => {
         })
       });
       
+      const data = await response.json();
+      
       if (response.ok) {
         setTransactionId('TXN' + Math.floor(Math.random() * 1000000));
+        localStorage.setItem('zmvms_pending_upgrade', 'true');
         setMode('success');
       } else {
-        alert('Failed to send upgrade request.');
+        alert(data.message || 'Failed to process payment.');
         setMode('choose_plan');
       }
     } catch (err) {
@@ -90,62 +93,120 @@ const SubscriptionModals = () => {
     }
   };
 
+  const WizardStepper = ({ step }) => (
+    <div className="flex items-center justify-center w-full max-w-2xl mx-auto mb-10">
+      <div className="flex items-center w-full">
+        <div className={`flex flex-col items-center relative ${step >= 1 ? 'text-[#1E1B6E]' : 'text-gray-400'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 bg-white z-10 ${step >= 1 ? 'border-[#1E1B6E] text-[#1E1B6E]' : 'border-gray-300'}`}>
+            1
+          </div>
+          <span className="absolute -bottom-6 text-xs font-bold whitespace-nowrap">Choose Plan</span>
+        </div>
+        <div className={`flex-1 h-1 mx-2 rounded ${step >= 2 ? 'bg-[#1E1B6E]' : 'bg-gray-200'}`}></div>
+        <div className={`flex flex-col items-center relative ${step >= 2 ? 'text-[#1E1B6E]' : 'text-gray-400'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 bg-white z-10 ${step >= 2 ? 'border-[#1E1B6E] text-[#1E1B6E]' : 'border-gray-300'}`}>
+            2
+          </div>
+          <span className="absolute -bottom-6 text-xs font-bold whitespace-nowrap">Payment</span>
+        </div>
+        <div className={`flex-1 h-1 mx-2 rounded ${step >= 3 ? 'bg-[#1E1B6E]' : 'bg-gray-200'}`}></div>
+        <div className={`flex flex-col items-center relative ${step >= 3 ? 'text-[#1E1B6E]' : 'text-gray-400'}`}>
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold border-2 bg-white z-10 ${step >= 3 ? 'border-[#1E1B6E] text-[#1E1B6E]' : 'border-gray-300'}`}>
+            3
+          </div>
+          <span className="absolute -bottom-6 text-xs font-bold whitespace-nowrap">Confirmation</span>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center p-4 ${mode === 'lock' ? 'bg-slate-900/40 backdrop-blur-xl' : 'bg-slate-900/80 backdrop-blur-sm'} animate-in fade-in duration-200`}>
       
-      {/* 1. LOCK SCREEN */}
+      {/* 1. LOCK SCREEN (Professional Freeze Screen) */}
       {mode === 'lock' && (
-        <div className="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl relative overflow-hidden border border-gray-200">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">🔒 Trial Expired</h2>
+        <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row animate-in zoom-in-95 duration-300">
           
-          <p className="text-gray-900 font-semibold mb-6 text-lg">
-            Your {user?.subscription || 'One Day Trial'} has ended.
-          </p>
-          
-          <div className="bg-slate-50 border-y border-slate-200 py-4 mb-6 text-left space-y-3 px-4">
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 font-medium">Company</span>
-              <span className="font-bold text-gray-900">{user?.companyName || user?.companyId}</span>
+          {/* Left Side: Expiry Details */}
+          <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-center items-center text-center bg-slate-50 border-r border-slate-200">
+            <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6 shadow-sm">
+              <ShieldAlert size={40} className="text-red-600" />
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 font-medium">Previous Plan</span>
-              <span className="font-bold text-gray-900">{user?.subscription || 'One Day Trial'}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-gray-500 font-medium">Expired On</span>
-              <span className="font-bold text-red-600 text-right">
-                {user?.subscriptionExpiresAt 
-                  ? new Date(user.subscriptionExpiresAt).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }).replace(',', '\n')
-                  : 'N/A'}
-              </span>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">Subscription Expired</h2>
+            <p className="text-gray-600 font-medium mb-8">Your trial has ended.</p>
+            
+            <div className="w-full space-y-4">
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-500 font-medium text-sm">Company</span>
+                <span className="font-bold text-gray-900">{user?.companyName || user?.companyId}</span>
+              </div>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-500 font-medium text-sm">Current Plan</span>
+                <span className="font-bold text-gray-900">{user?.subscription || 'One Day Trial'}</span>
+              </div>
+              <div className="flex justify-between items-center pb-3 border-b border-gray-200">
+                <span className="text-gray-500 font-medium text-sm">Expired</span>
+                <span className="font-bold text-red-600 text-right">
+                  {user?.subscriptionExpiresAt 
+                    ? new Date(user.subscriptionExpiresAt).toLocaleString('en-US', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                    : 'N/A'}
+                </span>
+              </div>
             </div>
           </div>
           
-          <p className="text-gray-500 mb-8">
-            To continue using the Visitor<br/>Management System, upgrade your plan.
-          </p>
-          
-          <div className="space-y-3">
-            <button
-              onClick={() => setMode('choose_plan')}
-              className="w-full bg-[#1E1B6E] text-white rounded-xl py-3.5 font-bold hover:bg-indigo-900 transition-colors shadow-lg"
-            >
-              Upgrade Now
-            </button>
-            <button
-              onClick={logout}
-              className="w-full bg-white text-gray-700 border border-gray-300 rounded-xl py-3.5 font-bold hover:bg-gray-50 transition-colors"
-            >
-              Logout
-            </button>
+          {/* Right Side: Why Upgrade? */}
+          <div className="md:w-1/2 p-8 md:p-12 flex flex-col justify-between bg-white">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Why upgrade?</h3>
+              <ul className="space-y-4">
+                {[
+                  'Continue Visitor Registration',
+                  'QR Code Access',
+                  'Security Dashboard',
+                  'Reports',
+                  'Notifications'
+                ].map((feature, i) => (
+                  <li key={i} className="flex items-center text-gray-700 font-medium">
+                    <CheckCircle size={20} className="text-green-500 mr-3 shrink-0" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            <div className="mt-10 space-y-3">
+              <button
+                onClick={() => setMode('choose_plan')}
+                className="w-full bg-[#1E1B6E] text-white rounded-xl py-4 font-bold text-lg hover:bg-indigo-900 transition-colors shadow-lg"
+              >
+                Upgrade Now
+              </button>
+              <div className="flex space-x-3">
+                <button
+                  className="flex-1 bg-white text-gray-700 border border-gray-300 rounded-xl py-3 font-semibold hover:bg-gray-50 transition-colors"
+                >
+                  Contact Support
+                </button>
+                <button
+                  onClick={logout}
+                  className="flex-1 bg-white text-red-600 border border-red-200 rounded-xl py-3 font-semibold hover:bg-red-50 transition-colors"
+                >
+                  Logout
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 2. CHOOSE PLAN */}
+      {/* 2. CHOOSE PLAN (Step 1) */}
       {mode === 'choose_plan' && (
         <div className="bg-white rounded-2xl p-6 md:p-8 max-w-5xl w-full shadow-2xl overflow-y-auto hide-scrollbar max-h-[90vh]">
-          <div className="text-center mb-10">
+          
+          <WizardStepper step={1} />
+          
+          <div className="text-center mb-10 mt-8">
             <h2 className="text-3xl font-bold text-gray-900 mb-3">Upgrade Your Plan</h2>
             <p className="text-gray-500 text-lg">Choose the best plan for your company.</p>
           </div>
@@ -195,10 +256,12 @@ const SubscriptionModals = () => {
         </div>
       )}
 
-      {/* 3. PAYMENT METHOD */}
+      {/* 3. PAYMENT METHOD (Step 2) */}
       {mode === 'payment' && (
         <div className="bg-white rounded-2xl p-6 md:p-8 max-w-md w-full shadow-2xl overflow-y-auto max-h-[90vh] hide-scrollbar">
-          <div className="flex items-center justify-between mb-8">
+          <WizardStepper step={2} />
+          
+          <div className="flex items-center justify-between mb-8 mt-6">
             <h2 className="text-2xl font-bold text-gray-900">Checkout</h2>
             <button 
               onClick={handleClose} 
@@ -269,13 +332,15 @@ const SubscriptionModals = () => {
         </div>
       )}
 
-      {/* 4. SUCCESS */}
+      {/* 4. SUCCESS (Step 3) */}
       {mode === 'success' && (
-        <div className="bg-white rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-          <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6">
+        <div className="bg-white rounded-2xl p-6 md:p-8 max-w-md w-full text-center shadow-2xl animate-in zoom-in duration-300">
+          <WizardStepper step={3} />
+          
+          <div className="mx-auto w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mb-6 mt-6">
             <CheckCircle size={40} className="text-green-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Payment Successful</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Payment Successful!</h2>
           
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-5 mb-6 text-left space-y-3">
             <div className="flex justify-between items-center">
@@ -290,10 +355,14 @@ const SubscriptionModals = () => {
               <span className="text-sm font-medium text-gray-500">Amount</span>
               <span className="font-bold text-gray-900">₹{selectedPlan?.price + Math.round(selectedPlan?.price * 0.18)}</span>
             </div>
+            <div className="flex justify-between items-center">
+              <span className="text-sm font-medium text-gray-500">Status</span>
+              <span className="font-bold text-orange-600">Pending Approval</span>
+            </div>
           </div>
           
           <p className="text-sm text-gray-600 mb-8 px-4 font-medium">
-            Your request has been sent for SaaS Admin approval.
+            Your request has been sent for SaaS Admin approval. The dashboard will automatically unlock once approved.
           </p>
           
           <button
@@ -306,7 +375,7 @@ const SubscriptionModals = () => {
             }}
             className="w-full bg-[#1E1B6E] text-white rounded-xl py-3.5 font-bold hover:bg-indigo-900 transition-colors shadow-lg"
           >
-            Go Dashboard
+            Check Status / Refresh
           </button>
         </div>
       )}

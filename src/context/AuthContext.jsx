@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext } from 'react';
+import React, { createContext, useState, useContext, useEffect } from 'react';
 
 const AuthContext = createContext(null);
 
@@ -7,6 +7,34 @@ export const AuthProvider = ({ children }) => {
     const saved = localStorage.getItem('zmvms_user') || sessionStorage.getItem('zmvms_user');
     return saved ? JSON.parse(saved) : null;
   });
+
+  // Global API Interceptor (Phase 25)
+  useEffect(() => {
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      // Only intercept 403 Forbidden responses
+      if (response.status === 403) {
+        // Clone the response so the original caller can still parse it if needed
+        const clone = response.clone();
+        try {
+          const data = await clone.json();
+          // Backend returned subscription expired
+          if (data.subscriptionExpired) {
+            updateUser({ isExpired: true });
+          }
+        } catch (err) {
+          // Ignore parsing errors for non-JSON 403s
+        }
+      }
+      return response;
+    };
+
+    // Cleanup on unmount
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, []);
 
   const login = async (email, password, rememberMe = false) => {
     try {
@@ -45,8 +73,21 @@ export const AuthProvider = ({ children }) => {
     sessionStorage.removeItem('zmvms_visitors');
   };
 
+  const updateUser = (updates) => {
+    setUser(prev => {
+      if (!prev) return null;
+      const updatedUser = { ...prev, ...updates };
+      if (localStorage.getItem('zmvms_user')) {
+        localStorage.setItem('zmvms_user', JSON.stringify(updatedUser));
+      } else if (sessionStorage.getItem('zmvms_user')) {
+        sessionStorage.setItem('zmvms_user', JSON.stringify(updatedUser));
+      }
+      return updatedUser;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

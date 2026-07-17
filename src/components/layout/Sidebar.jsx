@@ -25,6 +25,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
     { name: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} />, roles: ['SaaS Super Admin', 'Super Admin', 'MD', 'Admin', 'Security', 'Visitor', 'HR'] },
     { name: 'All Visitors', path: '/visitors', icon: <Users size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security', 'HR'] },
     { name: 'User Management', path: '/users', icon: <Shield size={20} />, roles: ['Super Admin'] },
+    { name: 'Branch Setup', path: '/branches', icon: <Map size={20} />, roles: ['Super Admin'] },
     { name: 'Approvals', path: '/approvals', icon: <CheckSquare size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'HR'] },
     { name: 'Blacklist', path: '/blacklist', icon: <Ban size={20} />, roles: ['Super Admin', 'MD', 'Admin', 'Security'] },
     { name: 'Reports', path: '/reports', icon: <FileText size={20} />, roles: ['Super Admin', 'MD', 'Admin'] },

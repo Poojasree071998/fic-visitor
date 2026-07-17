@@ -88,13 +88,18 @@ const SuperAdminDashboard = () => {
   const maxTrend = Math.max(...trendsData.map(d => d.visitors), 1);
 
   // Branch Performance Data
-  const branchData = branches.map(b => {
-    let branchVisitors = 0;
-    
-    if (b === 'All Branches') {
-      branchVisitors = visitors.length;
-    } else {
-      branchVisitors = visitors.filter(v => {
+  // Extract unique branches from visitors to ensure we show performance even if BranchSettings is empty
+  const activePhysicalBranches = new Set(branches.filter(b => b !== 'All Branches'));
+  visitors.forEach(v => {
+    if (v.branch) activePhysicalBranches.add(v.branch);
+  });
+  
+  let chartBranches = Array.from(activePhysicalBranches);
+  if (chartBranches.length === 0) chartBranches = ['Main Facility'];
+
+  const branchData = chartBranches
+    .map(b => {
+      let branchVisitors = visitors.filter(v => {
         if (!v.branch) return false;
         
         const branchUpper = v.branch.toUpperCase();
@@ -109,7 +114,6 @@ const SuperAdminDashboard = () => {
         
         return false;
       }).length;
-    }
 
     return {
       name: b,

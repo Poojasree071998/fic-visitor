@@ -18,18 +18,18 @@ const VisitorForm = () => {
   const navigate = useNavigate();
   
   const [hosts, setHosts] = useState([
-    'PRIYADHARSHINI(HR)',
-    'SANDHIYA(HR)',
-    'GANESH KUMAR(HR)',
-    'ADITHIYA(SENIOR HR)',
-    'R.SANDHIYA(HR)',
-    'MONIKA SHREE(HR)',
-    'SANDEEP(CEO SIR)',
-    'AVINASH(MD SIR)',
-    'SABARI(ADMIN)',
-    'VIJI(ADMIN)',
-    'AGILA(IT)',
-    'NEW VISITORS'
+    'Priyadharshini (HR)',
+    'Sandhiya (HR)',
+    'Ganesh Kumar (HR)',
+    'Adithiya (Senior HR)',
+    'R. Sandhiya (HR)',
+    'Monika Shree (HR)',
+    'Sandeep (CEO Sir)',
+    'Avinash (MD Sir)',
+    'Sabari (Admin)',
+    'Viji (Admin)',
+    'Agila (IT)',
+    'New Visitors'
   ]);
 
   const [isHostModalOpen, setIsHostModalOpen] = useState(false);
@@ -200,32 +200,7 @@ const VisitorForm = () => {
         </div>
       </div>
 
-      {/* Progress Indicator */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6 hidden md:block">
-        <div className="flex items-center justify-between relative px-8">
-          <div className="absolute left-10 right-10 top-1/2 h-0.5 bg-gray-100 -z-10"></div>
-          
-          <div className="flex flex-col items-center gap-2 bg-white px-4">
-            <div className="w-8 h-8 rounded-full bg-[var(--color-brand-indigo)] text-white flex items-center justify-center font-bold text-sm shadow-md">1</div>
-            <span className="text-xs font-semibold text-[var(--color-brand-indigo)] uppercase tracking-wider">Personal Info</span>
-          </div>
-          
-          <div className="flex flex-col items-center gap-2 bg-white px-4">
-            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 border-2 border-white flex items-center justify-center font-bold text-sm">2</div>
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Visit Details</span>
-          </div>
-          
-          <div className="flex flex-col items-center gap-2 bg-white px-4">
-            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 border-2 border-white flex items-center justify-center font-bold text-sm">3</div>
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Documents</span>
-          </div>
-          
-          <div className="flex flex-col items-center gap-2 bg-white px-4">
-            <div className="w-8 h-8 rounded-full bg-gray-100 text-gray-400 border-2 border-white flex items-center justify-center font-bold text-sm">4</div>
-            <span className="text-xs font-medium text-gray-400 uppercase tracking-wider">Review</span>
-          </div>
-        </div>
-      </div>
+
 
       {/* Info Tip Banner */}
       <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 flex gap-3 text-purple-800 shadow-sm">

@@ -11,6 +11,10 @@ const MainLayout = () => {
 
   const getSubscriptionReminder = () => {
     if (!user?.subscriptionExpiresAt || user.role === 'SaaS Super Admin') return null;
+    
+    const isPendingUpgrade = localStorage.getItem('zmvms_pending_upgrade') === 'true';
+    if (isPendingUpgrade) return 'Your upgrade request is currently pending SaaS Admin approval.';
+
     const expiry = new Date(user.subscriptionExpiresAt);
     const now = new Date();
     const diffTime = expiry - now;
@@ -47,7 +51,12 @@ const MainLayout = () => {
         {trialText && (
           <div className="bg-yellow-50 border-b border-yellow-200 mt-16 px-4 py-2 text-center text-yellow-800 text-sm font-medium z-10 flex items-center justify-center space-x-2">
             <span>⏱️</span>
-            <span>{trialText} Upgrade to unlock full access.</span>
+            <span>
+              {trialText}
+              {!localStorage.getItem('zmvms_pending_upgrade') && (
+                <span className="ml-1 font-bold">Upgrade to unlock full access.</span>
+              )}
+            </span>
           </div>
         )}
 

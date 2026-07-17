@@ -173,8 +173,8 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
           </button>
           
           {showDropdown && (
-            <div className="absolute -right-2 sm:right-0 mt-2 w-[90vw] max-w-[360px] sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 flex flex-col max-h-[85vh]">
-              <div className="p-3 sm:p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 rounded-t-lg shrink-0">
+            <div className="fixed top-16 left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-[380px] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col max-h-[80vh] sm:max-h-[85vh] overflow-hidden">
+              <div className="p-3 sm:p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 shrink-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-gray-800">Notifications</h3>
                   {unreadCount > 0 && (
@@ -231,7 +231,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
                 )}
               </div>
               
-              <div className="p-3 border-t border-gray-100 bg-gray-50/80 rounded-b-lg shrink-0">
+              <div className="p-3 border-t border-gray-100 bg-gray-50/80 shrink-0">
                 <button 
                   onClick={() => {
                     setShowDropdown(false);

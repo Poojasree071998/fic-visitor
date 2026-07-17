@@ -94,6 +94,66 @@ router.post('/request-upgrade', async (req, res) => {
   }
 });
 
+// POST mock-payment to automatically activate subscription (Step 7 & 8)
+router.post('/mock-payment', async (req, res) => {
+  try {
+    const { requestedPlan, amount, durationDays } = req.body;
+    
+    if (!requestedPlan || !amount || !durationDays) {
+      return res.status(400).json({ message: 'Missing required payment details' });
+    }
+
+    const Company = require('../models/Company');
+    const Notification = require('../models/Notification');
+    const User = require('../models/User');
+    
+    const company = await Company.findOne({ code: req.companyId });
+    if (!company) {
+      return res.status(404).json({ message: 'Company not found' });
+    }
+    
+    // Automatically activate the subscription
+    company.subscription = requestedPlan;
+    company.status = 'Active';
+    
+    // Set new expiry date
+    const newExpiry = new Date();
+    newExpiry.setDate(newExpiry.getDate() + parseInt(durationDays, 10));
+    company.subscriptionExpiresAt = newExpiry;
+    
+    await company.save();
+
+    // Send a notification to the SaaS Super Admin (SYSTEM)
+    const newNotif = await Notification.create({
+      companyId: 'SYSTEM',
+      type: 'Subscription',
+      title: '✅ Automatic Subscription Activated',
+      message: `${company.name} successfully paid ₹${amount} and upgraded to ${requestedPlan} (Valid for ${durationDays} days).`,
+      createdBy: req.userRole || 'System'
+    });
+
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('new_notification', newNotif);
+    }
+
+    // Email receipt to Company Admin
+    const companyAdmin = await User.findOne({ companyId: company.code, role: 'Super Admin' });
+    if (companyAdmin && companyAdmin.email) {
+      await sendEmail(companyAdmin.email, EmailTemplates.paymentReceived(company.name, requestedPlan, amount).subject, EmailTemplates.paymentReceived(company.name, requestedPlan, amount).body);
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Payment successful. Subscription is now active.',
+      subscription: company.subscription,
+      subscriptionExpiresAt: company.subscriptionExpiresAt
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 // GET company usage stats
 router.get('/usage', async (req, res) => {
   try {

@@ -23,18 +23,18 @@ const ReturningVisitor = () => {
   });
 
   const [hosts, setHosts] = useState([
-    'PRIYADHARSHINI(HR)',
-    'SANDHIYA(HR)',
-    'GANESH KUMAR(HR)',
-    'ADITHIYA(SENIOR HR)',
-    'R.SANDHIYA(HR)',
-    'MONIKA SHREE(HR)',
-    'SANDEEP(CEO SIR)',
-    'AVINASH(MD SIR)',
-    'SABARI(ADMIN)',
-    'VIJI(ADMIN)',
-    'AGILA(IT)',
-    'NEW VISITORS'
+    'Priyadharshini (HR)',
+    'Sandhiya (HR)',
+    'Ganesh Kumar (HR)',
+    'Adithiya (Senior HR)',
+    'R. Sandhiya (HR)',
+    'Monika Shree (HR)',
+    'Sandeep (CEO Sir)',
+    'Avinash (MD Sir)',
+    'Sabari (Admin)',
+    'Viji (Admin)',
+    'Agila (IT)',
+    'New Visitors'
   ]);
 
 

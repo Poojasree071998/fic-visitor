@@ -271,31 +271,38 @@ router.post('/mock-payment', async (req, res) => {
       return res.status(404).json({ message: 'Company not found' });
     }
 
-    // Update plan and extend subscription by 30 days
-    const expiry = new Date();
-    expiry.setDate(expiry.getDate() + 30);
+    // Create Upgrade Request instead of automatically activating
+    const UpgradeRequest = require('../models/UpgradeRequest');
+    
+    // Calculate amount based on plan
+    const amount = plan === 'Enterprise' ? 6999 : (plan === 'Standard' ? 2999 : 999);
+    
+    const upgradeReq = await UpgradeRequest.create({
+      companyId: company.code,
+      companyName: company.name,
+      requestedPlan: plan,
+      amount: amount,
+      durationDays: 30,
+      status: 'Pending',
+      requestedBy: 'System Simulator'
+    });
 
-    company.subscription = plan;
-    company.status = 'Active';
-    company.subscriptionExpiresAt = expiry;
-    await company.save();
-
-    // Trigger Notification for Subscription Activated
+    // Trigger Notification for Subscription Requested
     const Notification = require('../models/Notification');
     const newNotification = await Notification.create({
       companyId: 'SYSTEM',
       type: 'Subscription',
-      title: '💳 Subscription Activated',
-      message: `${company.name} subscribed to ${plan} Plan.`,
-      createdBy: 'System'
+      title: '📈 Subscription Upgrade Requested',
+      message: `${company.name} requested to upgrade to ${plan} Plan.`,
+      createdBy: 'System Simulator'
     });
     
     const companyNotification = await Notification.create({
       companyId: company.code,
       type: 'Subscription',
-      title: '💳 Subscription Activated',
-      message: `Your company subscribed to ${plan} Plan.`,
-      createdBy: 'System'
+      title: '📈 Subscription Upgrade Requested',
+      message: `Your company requested to upgrade to ${plan} Plan. Pending Approval.`,
+      createdBy: 'System Simulator'
     });
 
     const io = req.app.get('io');
@@ -305,7 +312,7 @@ router.post('/mock-payment', async (req, res) => {
     }
 
     res.json({
-      message: 'Payment mock successful. Company subscription activated.',
+      message: 'Payment simulation successful. Upgrade request created and is pending approval.',
       company: {
         name: company.name,
         code: company.code,

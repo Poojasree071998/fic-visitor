@@ -34,6 +34,7 @@ import UserList from './pages/users/UserList';
 import UserForm from './pages/users/UserForm';
 import AttendanceLog from './pages/tracking/AttendanceLog';
 import Settings from './pages/settings/Settings';
+import BranchSettings from './pages/settings/BranchSettings';
 
 import Subscription from './pages/settings/Subscription';
 
@@ -87,6 +88,7 @@ const AppRoutes = () => {
         {/* User Management */}
         <Route path="users" element={<ProtectedRoute allowedRoles={['Super Admin']}><UserList /></ProtectedRoute>} />
         <Route path="users/new" element={<ProtectedRoute allowedRoles={['Super Admin']}><UserForm /></ProtectedRoute>} />
+        <Route path="branches" element={<ProtectedRoute allowedRoles={['Super Admin']}><BranchSettings /></ProtectedRoute>} />
         
         {/* Visitor Management */}
         <Route path="visitors" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><VisitorList /></ProtectedRoute>} />
