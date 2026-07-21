@@ -124,13 +124,14 @@ app.get('/api/network-ip', (req, res) => {
   res.json({ ip });
 });
 
-// Serve frontend static files in production
-const path = require('path');
-app.use(express.static(path.join(__dirname, '../dist')));
+// Simple health check route for the root URL
+app.get('/', (req, res) => {
+  res.json({ status: 'API is running successfully', environment: process.env.NODE_ENV });
+});
 
-// Catch-all route to serve the React app for any non-API routes
-app.get('/{*splat}', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist', 'index.html'));
+// Catch-all for unhandled routes
+app.use((req, res) => {
+  res.status(404).json({ message: 'API route not found' });
 });
 
 // Start server
