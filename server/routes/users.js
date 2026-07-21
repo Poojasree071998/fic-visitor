@@ -31,12 +31,12 @@ router.get('/fix-branches', async (req, res) => {
     await User.updateMany({ branch: 'Thirupathur' }, { $set: { branch: 'Tirupattur' } });
     await User.updateMany({ branch: 'Dharmapuri (Palakodu)' }, { $set: { branch: 'Salem' } });
     await User.updateMany({ branch: 'Bangalore' }, { $set: { branch: 'Chennai' } });
-    
+
     await Visitor.updateMany({ branch: 'Thirupathur' }, { $set: { branch: 'Tirupattur' } });
     await Visitor.updateMany({ branch: 'Dharmapuri (Palakodu)' }, { $set: { branch: 'Salem' } });
     await Visitor.updateMany({ branch: 'Bangalore' }, { $set: { branch: 'Chennai' } });
     res.json({ message: 'Branches fixed' });
-  } catch(err) {
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
@@ -53,6 +53,7 @@ router.get('/', async (req, res) => {
     const sanitizedUsers = users.map(user => {
       const u = user.toJSON();
       delete u.password;
+      u.branch = u.branchId;
       return u;
     });
     res.json(sanitizedUsers);
@@ -66,9 +67,10 @@ router.get('/:id', async (req, res) => {
   try {
     const user = await User.findOne({ _id: req.params.id, companyId: req.companyId });
     if (!user) return res.status(404).json({ message: 'User not found' });
-    
+
     const u = user.toJSON();
     delete u.password;
+    u.branch = u.branchId;
     res.json(u);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -97,21 +99,21 @@ router.post('/', async (req, res) => {
       const company = await Company.findOne({ code: req.companyId });
       if (company && company.subscription) {
         const limits = planLimits[company.subscription];
-        
+
         if (req.body.role === 'Security' && limits && limits.securityUsers !== -1) {
           const count = await User.countDocuments({ companyId: req.companyId, role: 'Security' });
           if (count >= limits.securityUsers) {
-            return res.status(403).json({ 
-              message: `Maximum security users reached. Your current plan (${company.subscription}) only allows up to ${limits.securityUsers} security staff members. Please upgrade your plan.` 
+            return res.status(403).json({
+              message: `Maximum security users reached. Your current plan (${company.subscription}) only allows up to ${limits.securityUsers} security staff members. Please upgrade your plan.`
             });
           }
         }
-        
+
         if (['Admin', 'Branch Admin', 'MD', 'Company Admin'].includes(req.body.role) && limits && limits.admins !== -1) {
           const count = await User.countDocuments({ companyId: req.companyId, role: { $in: ['Admin', 'Branch Admin', 'MD', 'Company Admin'] } });
           if (count >= limits.admins) {
-            return res.status(403).json({ 
-              message: `Maximum admin users reached. Your current plan (${company.subscription}) only allows up to ${limits.admins} admin members. Please upgrade your plan.` 
+            return res.status(403).json({
+              message: `Maximum admin users reached. Your current plan (${company.subscription}) only allows up to ${limits.admins} admin members. Please upgrade your plan.`
             });
           }
         }
@@ -131,7 +133,7 @@ router.post('/', async (req, res) => {
     });
 
     const newUser = await user.save();
-    
+
     // Trigger Notification for User added
     if (newUser.role === 'Admin' || newUser.role === 'Branch Admin' || newUser.role === 'Security') {
       const Notification = require('../models/Notification');
@@ -140,9 +142,10 @@ router.post('/', async (req, res) => {
       const newNotification = await Notification.create({
         companyId: req.companyId,
         branchId: newUser.branch,
-        type: typeStr,
+        type: 'success',
+        module: 'Users',
         title: titleStr,
-        message: `${newUser.name} was added as ${newUser.role} for ${newUser.branch} Branch.`,
+        message: `${newUser.name} was added as ${newUser.role} for ${newUser.branchId} Branch.`,
         createdBy: req.body.createdBy || 'System'
       });
       const io = req.app.get('io');
@@ -150,12 +153,17 @@ router.post('/', async (req, res) => {
         io.emit('new_notification', newNotification);
       }
     }
-    
+
     // Audit Log
-    await logAction(req, `Added User: ${newUser.name} (${newUser.role})`, 'User Management');
+    await logAction(req, `Added User`, 'User Management', {
+      userId: req.user ? req.user._id : undefined,
+      description: `User ${newUser.name} was added as ${newUser.role}`,
+      status: 'Success'
+    });
 
     const u = newUser.toJSON();
     delete u.password;
+    u.branch = u.branchId;
     res.status(201).json(u);
   } catch (err) {
     res.status(400).json({ message: err.message });
@@ -175,10 +183,10 @@ router.patch('/:id', async (req, res) => {
       { $set: req.body },
       { new: true }
     );
-    
+
     // Audit & Notifications
     const performedBy = req.headers['x-user-role'] === 'Super Admin' ? 'SaaS Super Admin' : 'Admin';
-    
+
     if (req.body.branch && req.body.branch !== oldUser.branch) {
       await AuditLog.create({
         companyId: req.companyId,
@@ -195,7 +203,8 @@ router.patch('/:id', async (req, res) => {
         const superAdminNotif = await Notification.create({
           companyId: req.companyId,
           branchId: 'All Branches',
-          type: 'Admin',
+          type: 'info',
+          module: 'Users',
           title: 'User Transfer',
           message: `User transferred successfully. ${updatedUser.name} moved from ${oldUser.branch} to ${updatedUser.branch}.`,
           createdBy: performedBy
@@ -206,7 +215,8 @@ router.patch('/:id', async (req, res) => {
         const newBranchNotif = await Notification.create({
           companyId: req.companyId,
           branchId: updatedUser.branch,
-          type: 'Admin',
+          type: 'info',
+          module: 'Users',
           title: 'New User Assigned',
           message: `${updatedUser.name} has been assigned to ${updatedUser.branch} Branch.`,
           createdBy: performedBy
@@ -225,8 +235,8 @@ router.patch('/:id', async (req, res) => {
         userId: updatedUser._id,
         userName: updatedUser.name,
         action: isBlocking ? 'Blocked' : 'Status Changed',
-        details: isBlocking 
-          ? `${updatedUser.name} was blocked.${reasonText}` 
+        details: isBlocking
+          ? `${updatedUser.name} was blocked.${reasonText}`
           : `${updatedUser.name} status changed from ${oldUser.status} to ${updatedUser.status}`,
         performedBy
       });
@@ -238,7 +248,8 @@ router.patch('/:id', async (req, res) => {
           const blockNotif = await Notification.create({
             companyId: req.companyId,
             branchId: updatedUser.branch,
-            type: 'Security',
+            type: 'warning',
+            module: 'Users',
             title: 'Security Account Blocked',
             message: `Security user ${updatedUser.name} was blocked by Super Admin.${reasonText}`,
             createdBy: performedBy
@@ -249,7 +260,8 @@ router.patch('/:id', async (req, res) => {
           const unblockNotif = await Notification.create({
             companyId: req.companyId,
             branchId: updatedUser.branch,
-            type: 'Security',
+            type: 'success',
+            module: 'Users',
             title: 'Security Account Unblocked',
             message: `Security user ${updatedUser.name} was unblocked by Super Admin.`,
             createdBy: performedBy
@@ -261,6 +273,7 @@ router.patch('/:id', async (req, res) => {
 
     const u = updatedUser.toJSON();
     delete u.password;
+    u.branch = u.branchId;
     res.json(u);
   } catch (err) {
     res.status(400).json({ message: err.message });

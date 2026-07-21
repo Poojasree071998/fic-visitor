@@ -25,6 +25,9 @@ const SaaSPlatformDashboard = () => {
   const [companies, setCompanies] = useState([]);
   const [payments, setPayments] = useState([]);
   const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogFilters, setAuditLogFilters] = useState({
+    search: '', date: '', company: '', module: 'All', status: 'All'
+  });
   const [upgradeRequests, setUpgradeRequests] = useState([]);
   const [analytics, setAnalytics] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -322,6 +325,39 @@ const SaaSPlatformDashboard = () => {
     } catch (err) {
       showToast(err.message, 'error');
     }
+  };
+
+  const filteredAuditLogs = auditLogs.filter(log => {
+    const matchesSearch = 
+      (log.action || '').toLowerCase().includes(auditLogFilters.search.toLowerCase()) ||
+      (log.userName || '').toLowerCase().includes(auditLogFilters.search.toLowerCase());
+    
+    const matchesModule = auditLogFilters.module === 'All' || log.module === auditLogFilters.module;
+    const matchesStatus = auditLogFilters.status === 'All' || log.status === auditLogFilters.status;
+    const matchesCompany = auditLogFilters.company === '' || (log.companyName || '').toLowerCase().includes(auditLogFilters.company.toLowerCase());
+    
+    let matchesDate = true;
+    if (auditLogFilters.date) {
+      const logDate = new Date(log.createdAt).toISOString().split('T')[0];
+      matchesDate = logDate === auditLogFilters.date;
+    }
+
+    return matchesSearch && matchesModule && matchesStatus && matchesCompany && matchesDate;
+  });
+
+  const handleExportAuditLogs = () => {
+    const exportData = filteredAuditLogs.map(log => ({
+      'Date & Time': new Date(log.createdAt).toLocaleString('en-US'),
+      'Company': log.companyName || 'Unknown',
+      'User Name': log.userName,
+      'Role': log.role,
+      'Action': log.action,
+      'Module': log.module,
+      'Description': log.description || '',
+      'Status': log.status || 'Success',
+      'IP Address': log.ipAddress || 'Unknown'
+    }));
+    exportToCSV(exportData, 'SaaS_Audit_Logs.csv');
   };
 
   return (
@@ -715,51 +751,126 @@ const SaaSPlatformDashboard = () => {
 
         {activeTab === 'Audit Logs' && (
           <>
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-bold text-gray-900">Platform Audit Logs</h3>
-              <p className="text-xs text-gray-500 mt-0.5">System-wide monitoring of critical administrative actions</p>
+            <div className="p-6 border-b border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Platform Audit Logs</h3>
+                <p className="text-xs text-gray-500 mt-0.5">System-wide monitoring of critical administrative actions</p>
+              </div>
+              <button 
+                onClick={handleExportAuditLogs}
+                className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors"
+              >
+                <Download size={14} /> Export CSV
+              </button>
             </div>
+
+            {/* Filters */}
+            <div className="bg-slate-50 p-4 border-b border-gray-200 flex flex-col md:flex-row gap-4 items-center flex-wrap">
+              <input
+                type="text"
+                className="flex-1 min-w-[200px] px-3 py-2 border border-gray-200 rounded-lg focus:ring-[#1E1B6E] focus:border-[#1E1B6E] text-sm"
+                placeholder="Search action or user..."
+                value={auditLogFilters.search}
+                onChange={(e) => setAuditLogFilters({...auditLogFilters, search: e.target.value})}
+              />
+              <input
+                type="text"
+                className="w-40 px-3 py-2 border border-gray-200 rounded-lg focus:ring-[#1E1B6E] focus:border-[#1E1B6E] text-sm"
+                placeholder="Filter company..."
+                value={auditLogFilters.company}
+                onChange={(e) => setAuditLogFilters({...auditLogFilters, company: e.target.value})}
+              />
+              <input 
+                type="date"
+                className="w-40 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-[#1E1B6E]"
+                value={auditLogFilters.date}
+                onChange={(e) => setAuditLogFilters({...auditLogFilters, date: e.target.value})}
+              />
+              <select
+                value={auditLogFilters.module}
+                onChange={(e) => setAuditLogFilters({...auditLogFilters, module: e.target.value})}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-[#1E1B6E]"
+              >
+                <option value="All">All Modules</option>
+                <option value="Authentication">Auth</option>
+                <option value="Visitor">Visitor</option>
+                <option value="User Management">Users</option>
+                <option value="Tenant Management">Tenants</option>
+                <option value="Subscription">Subscription</option>
+                <option value="Settings">Settings</option>
+              </select>
+              <select
+                value={auditLogFilters.status}
+                onChange={(e) => setAuditLogFilters({...auditLogFilters, status: e.target.value})}
+                className="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:ring-[#1E1B6E]"
+              >
+                <option value="All">All Statuses</option>
+                <option value="Success">Success</option>
+                <option value="Failure">Failure</option>
+                <option value="Pending">Pending</option>
+              </select>
+            </div>
+
             <div className="overflow-x-auto pb-2">
               <table className="w-full text-left border-collapse min-w-max">
                 <thead>
                   <tr className="bg-slate-50 text-gray-500 text-[11px] uppercase tracking-wider">
-                    <th className="px-6 py-4 font-medium">Timestamp</th>
-                    <th className="px-6 py-4 font-medium">User & Role</th>
+                    <th className="px-6 py-4 font-medium">Date & Time</th>
                     <th className="px-6 py-4 font-medium">Company</th>
+                    <th className="px-6 py-4 font-medium">User & Role</th>
                     <th className="px-6 py-4 font-medium">Action</th>
                     <th className="px-6 py-4 font-medium">Module</th>
+                    <th className="px-6 py-4 font-medium text-center">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 text-sm">
-                  {auditLogs.map((log) => (
+                  {filteredAuditLogs.map((log) => (
                     <tr key={`saas-audit-${log._id}`} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-gray-500">
-                        {new Date(log.createdAt).toLocaleString('en-US', { 
-                          month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' 
-                        })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-semibold text-gray-900">{log.userName}</div>
-                        <div className="text-[10px] text-gray-500 font-normal uppercase tracking-wider">{log.role}</div>
+                        <div className="flex flex-col">
+                          <span className="font-semibold text-gray-800">
+                            {new Date(log.createdAt).toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </span>
+                          <span className="text-[11px]">
+                            {new Date(log.createdAt).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-semibold text-gray-900">{log.companyName || 'Unknown'}</div>
                         <div className="text-[10px] text-gray-500 font-normal tracking-wider">{log.companyId}</div>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="font-semibold text-gray-900">{log.userName}</div>
+                        <div className="text-[10px] text-gray-500 font-normal uppercase tracking-wider">{log.role}</div>
+                      </td>
                       <td className="px-6 py-4 font-medium text-gray-800">
-                        {log.action}
+                        <div className="flex items-center gap-2">
+                          <Activity size={14} className="text-[#1E1B6E]" />
+                          <span>{log.action}</span>
+                        </div>
+                        {log.description && (
+                          <p className="text-[11px] text-gray-500 mt-1 font-normal max-w-xs truncate" title={log.description}>{log.description}</p>
+                        )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-gray-700">
                           {log.module}
                         </span>
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-center">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          log.status === 'Success' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+                        }`}>
+                          {log.status || 'Success'}
+                        </span>
+                      </td>
                     </tr>
                   ))}
-                  {auditLogs.length === 0 && !loading && (
+                  {filteredAuditLogs.length === 0 && !loading && (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-gray-500 font-medium bg-slate-50/50">
-                        No audit logs available.
+                      <td colSpan="6" className="px-6 py-12 text-center text-gray-500 font-medium bg-slate-50/50">
+                        No audit logs available matching filters.
                       </td>
                     </tr>
                   )}

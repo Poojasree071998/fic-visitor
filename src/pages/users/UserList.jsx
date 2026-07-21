@@ -261,7 +261,9 @@ const UserList = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold
+                      <button 
+                        onClick={() => toggleUserStatus(u.id || u._id, u.status || 'Active')}
+                        className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold cursor-pointer hover:opacity-80 transition-opacity
                         ${u.status === 'Inactive' ? 'bg-red-100 text-red-700' : ''}
                         ${u.status === 'Blocked' ? 'bg-yellow-100 text-yellow-700' : ''}
                         ${(!u.status || u.status === 'Active') ? 'bg-green-100 text-green-700' : ''}
@@ -270,7 +272,7 @@ const UserList = () => {
                         {u.status === 'Blocked' && <span className="w-2 h-2 rounded-full bg-yellow-500"></span>}
                         {(!u.status || u.status === 'Active') && <span className="w-2 h-2 rounded-full bg-green-500"></span>}
                         {u.status || 'Active'}
-                      </span>
+                      </button>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2 text-gray-600 text-sm font-medium">

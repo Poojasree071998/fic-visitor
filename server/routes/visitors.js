@@ -8,6 +8,8 @@ const VisitorProfile = require('../models/VisitorProfile');
 const Notification = require('../models/Notification');
 const authMiddleware = require('../middleware/authMiddleware');
 const logAction = require('../utils/auditLogger');
+const sendNotification = require('../utils/firebaseNotification');
+const User = require('../models/User');
 
 router.use((req, res, next) => {
   if (req.path.startsWith('/pass/')) {
@@ -15,6 +17,8 @@ router.use((req, res, next) => {
   }
   authMiddleware(req, res, next);
 });
+
+const { v4: uuidv4 } = require('uuid');
 
 // Configure Multer storage to use Cloudinary
 const storage = new CloudinaryStorage({
@@ -26,11 +30,25 @@ const storage = new CloudinaryStorage({
       const cleanBranch = branch.replace(/[^a-zA-Z0-9]/g, '_');
       return `fic-vms/${company}/${cleanBranch}`;
     },
+    public_id: (req, file) => `${uuidv4()}`,
     allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
     transformation: [{ width: 500, height: 500, crop: 'limit' }]
   },
 });
-const upload = multer({ storage: storage });
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, and WebP are allowed.'));
+    }
+  }
+});
+
 
 // Upload Visitor Photo Endpoint
 router.post('/upload', upload.single('photo'), (req, res) => {
@@ -58,12 +76,12 @@ router.get('/todays-summary', async (req, res) => {
     };
 
     if (req.userRole === 'Security' || req.userRole === 'Admin' || req.userRole === 'MD') {
-       matchStage.branch = req.branchId;
+      matchStage.branch = req.branchId;
     } else if (branchId && branchId !== 'All Branches') {
       const branchUpper = branchId.toUpperCase();
       const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       let searchRegexStr = escapeRegExp(branchId);
-      
+
       if (branchUpper.includes('THIRUPATTUR')) {
         searchRegexStr = `${searchRegexStr}|Tirupattur`;
       } else if (branchUpper.includes('KRISHNAGIRI')) {
@@ -82,7 +100,7 @@ router.get('/todays-summary', async (req, res) => {
 
     const hostCounts = await Visitor.aggregate([
       { $match: matchStage },
-      { 
+      {
         $group: {
           _id: "$hostName",
           count: { $sum: { $ifNull: ["$visitorCount", 1] } }
@@ -106,26 +124,26 @@ router.get('/todays-summary', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     let query = { companyId: req.companyId };
-    
+
     // Enforce strict branch isolation based on role
     if (req.userRole === 'Security' || req.userRole === 'Admin' || req.userRole === 'MD') {
-       query.branch = req.branchId;
+      query.branch = req.branchId;
     } else if (req.query.branch && req.query.branch !== 'All Branches') {
-       // Super Admins can filter by branch
-       const branchUpper = req.query.branch.toUpperCase();
-       const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-       let searchRegexStr = escapeRegExp(req.query.branch);
-       
-       if (branchUpper.includes('THIRUPATTUR')) {
-         searchRegexStr = `${searchRegexStr}|Tirupattur`;
-       } else if (branchUpper.includes('KRISHNAGIRI')) {
-         searchRegexStr = `${searchRegexStr}|Salem`;
-       } else if (branchUpper === 'BANGALORE') {
-         searchRegexStr = `${searchRegexStr}|Bangalore`;
-       }
-       query.branch = { $regex: new RegExp(`^(${searchRegexStr})$`, 'i') };
+      // Super Admins can filter by branch
+      const branchUpper = req.query.branch.toUpperCase();
+      const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      let searchRegexStr = escapeRegExp(req.query.branch);
+
+      if (branchUpper.includes('THIRUPATTUR')) {
+        searchRegexStr = `${searchRegexStr}|Tirupattur`;
+      } else if (branchUpper.includes('KRISHNAGIRI')) {
+        searchRegexStr = `${searchRegexStr}|Salem`;
+      } else if (branchUpper === 'BANGALORE') {
+        searchRegexStr = `${searchRegexStr}|Bangalore`;
+      }
+      query.branch = { $regex: new RegExp(`^(${searchRegexStr})$`, 'i') };
     }
-    
+
     const visitors = await Visitor.find(query).sort({ createdAt: -1 });
     res.json(visitors);
   } catch (err) {
@@ -163,8 +181,8 @@ router.post('/', async (req, res) => {
         });
 
         if (count >= limits.visitors) {
-          return res.status(403).json({ 
-            message: `Visitor limit reached. Your current plan (${company.subscription}) only allows up to ${limits.visitors} visitors per month. Please upgrade your subscription.` 
+          return res.status(403).json({
+            message: `Visitor limit reached. Your current plan (${company.subscription}) only allows up to ${limits.visitors} visitors per month. Please upgrade your subscription.`
           });
         }
       }
@@ -209,11 +227,11 @@ router.post('/', async (req, res) => {
       if (match) vNum = parseInt(match[0], 10) + 1;
     }
     const visitId = `VISIT${vNum.toString().padStart(4, '0')}`;
-    
+
     // 3. Generate QR Code URL
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     const qrCode = `${frontendUrl}/pass/${visitId}`;
-    
+
     // 4. Save the Visit Record
     const visitor = new Visitor({
       ...req.body,
@@ -229,7 +247,8 @@ router.post('/', async (req, res) => {
     const notification = await Notification.create({
       companyId: req.companyId,
       branchId: newVisitor.branch,
-      type: 'Visitor',
+      type: 'success',
+      module: 'Visitors',
       title: '👥 Visitor Registered',
       message: `${newVisitor.visitorName} has been registered for ${newVisitor.hostName || 'a visit'}.`,
       createdBy: req.user ? req.user.name : 'Security'
@@ -239,9 +258,13 @@ router.post('/', async (req, res) => {
     if (io) {
       io.emit('new_notification', notification);
     }
-    
+
     // Audit log
-    await logAction(req, `Visitor Registered: ${newVisitor.visitorName}`, 'Visitor');
+    await logAction(req, `Visitor Registered`, 'Visitor', {
+      userId: req.user ? req.user._id : undefined,
+      description: `Visitor ${newVisitor.visitorName} was registered successfully.`,
+      status: 'Success'
+    });
 
     res.status(201).json(newVisitor);
   } catch (err) {
@@ -276,7 +299,7 @@ router.patch('/:id', async (req, res) => {
       req.body,
       { new: true }
     );
-    
+
     // Check if status changed to Approved or Rejected
     if (req.body.status && oldVisitor && oldVisitor.status !== req.body.status) {
       if (req.body.status === 'Approved' || req.body.status === 'Rejected') {
@@ -284,37 +307,57 @@ router.patch('/:id', async (req, res) => {
         const notification = await Notification.create({
           companyId: req.companyId,
           branchId: updatedVisitor.branch,
-          type: 'Visitor',
+          type: req.body.status === 'Approved' ? 'success' : 'error',
+          module: 'Visitors',
           title: `👥 Visitor ${req.body.status}`,
           message: `${updatedVisitor.visitorName} has been ${action} by ${req.body.approvedBy || 'Admin'}.`,
           createdBy: req.body.approvedBy || 'System'
         });
-        
+
         const io = req.app.get('io');
         if (io) {
           io.emit('new_notification', notification);
+        }
+
+        // Send Firebase Push Notification to the Host
+        const hostUser = await User.findOne({
+          companyId: req.companyId,
+          name: updatedVisitor.hostName
+        });
+
+        if (hostUser && hostUser.fcmToken) {
+          await sendNotification(
+            hostUser.fcmToken,
+            `Visitor ${req.body.status}`,
+            `${updatedVisitor.visitorName} has been ${req.body.status.toLowerCase()}.`
+          );
         }
       }
     }
-    
+
     // Audit Log for any status change
     if (req.body.status && oldVisitor && oldVisitor.status !== req.body.status) {
-      await logAction(req, `Visitor Status changed to ${req.body.status}`, 'Visitor');
+      await logAction(req, `Visitor Status Changed`, 'Visitor', {
+        userId: req.user ? req.user._id : undefined,
+        description: `Visitor ${oldVisitor.visitorName}'s status changed from ${oldVisitor.status} to ${req.body.status}.`,
+        status: 'Success'
+      });
     }
 
     if (req.body.status === 'Inside' && oldVisitor && oldVisitor.status !== 'Inside') {
-       const notification = await Notification.create({
-          companyId: req.companyId,
-          branchId: updatedVisitor.branch,
-          type: 'Visitor',
-          title: '✅ Visitor Checked In',
-          message: `${updatedVisitor.visitorName} checked in at ${updatedVisitor.branch} Branch.`,
-          createdBy: req.user ? req.user.name : 'System'
-        });
-        const io = req.app.get('io');
-        if (io) {
-          io.emit('new_notification', notification);
-        }
+      const notification = await Notification.create({
+        companyId: req.companyId,
+        branchId: updatedVisitor.branch,
+        type: 'success',
+        module: 'Visitors',
+        title: '✅ Visitor Checked In',
+        message: `${updatedVisitor.visitorName} checked in at ${updatedVisitor.branch} Branch.`,
+        createdBy: req.user ? req.user.name : 'System'
+      });
+      const io = req.app.get('io');
+      if (io) {
+        io.emit('new_notification', notification);
+      }
     }
 
     res.json(updatedVisitor);
@@ -338,7 +381,7 @@ router.patch('/:id/zone', async (req, res) => {
     // If leaving a zone (moving to a new one or exiting building entirely)
     if (visitor.currentZone && visitor.status === 'Inside') {
       const lastLogIndex = visitor.zoneLogs.length - 1;
-      
+
       // We need to close the last log if it exists and hasn't been closed
       if (lastLogIndex >= 0 && !visitor.zoneLogs[lastLogIndex].exitTime) {
         visitor.zoneLogs[lastLogIndex].exitTime = new Date();
@@ -346,13 +389,13 @@ router.patch('/:id/zone', async (req, res) => {
         const durationMs = new Date() - entry;
         visitor.zoneLogs[lastLogIndex].durationMinutes = Math.round(durationMs / 60000);
       } else if (lastLogIndex === -1 || visitor.zoneLogs[lastLogIndex].exitTime) {
-         // Create a synthetic log if there isn't one open, based on previous entryTime
-         visitor.zoneLogs.push({
-           zoneName: visitor.currentZone,
-           entryTime: new Date(), // fallback
-           exitTime: new Date(),
-           durationMinutes: 0
-         });
+        // Create a synthetic log if there isn't one open, based on previous entryTime
+        visitor.zoneLogs.push({
+          zoneName: visitor.currentZone,
+          entryTime: new Date(), // fallback
+          exitTime: new Date(),
+          durationMinutes: 0
+        });
       }
     }
 
@@ -377,18 +420,19 @@ router.patch('/:id/zone', async (req, res) => {
     }
 
     await visitor.save();
-    
+
     // Check if visitor has checked out
     if (status === 'Exited') {
       const notification = await Notification.create({
         companyId: req.companyId,
         branchId: visitor.branch,
-        type: 'Visitor',
+        type: 'info',
+        module: 'Visitors',
         title: '🚪 Visitor Checked Out',
         message: `${visitor.visitorName} checked out successfully.`,
         createdBy: req.user ? req.user.name : 'System'
       });
-      
+
       const io = req.app.get('io');
       if (io) {
         io.emit('new_notification', notification);
@@ -434,10 +478,10 @@ router.get('/profile/:query', async (req, res) => {
     }
 
     if (!profile) return res.json({ exists: false });
-    
+
     // Ensure profileId is always returned (even if it's from the Profile document)
-    res.json({ 
-      exists: true, 
+    res.json({
+      exists: true,
       profile: {
         profileId: profile.profileId,
         mobileNumber: profile.mobileNumber,

@@ -27,10 +27,13 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  plainPassword: {
+    type: String
+  },
   role: {
     type: String,
     required: true,
-    enum: ['Super Admin', 'MD', 'Admin', 'Security', 'Visitor', 'HR']
+    enum: ['SaaS Super Admin', 'Super Admin', 'Company Admin', 'Admin', 'MD', 'HR', 'Receptionist', 'Security Guard', 'Security', 'Employee', 'Visitor']
   },
   status: {
     type: String,
@@ -41,10 +44,14 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   },
-  branch: {
+  branchId: {
     type: String,
     required: true,
     default: 'All Branches'
+  },
+  fcmToken: {
+    type: String,
+    default: ""
   },
   createdBy: {
     type: String,

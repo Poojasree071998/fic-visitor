@@ -15,11 +15,17 @@ const ReportsDashboard = () => {
   
   // Apply Strict Branch Filtering
   // If the user is assigned to a specific branch, they should ONLY see that branch's data, regardless of their role.
-  const filteredVisitors = user?.branch && user.branch !== 'All' && user.branch !== 'All Branches'
+  const baseFilteredVisitors = user?.branch && user.branch !== 'All' && user.branch !== 'All Branches'
     ? allVisitors.filter(v => v.branch === user.branch)
     : allVisitors;
 
+  const [dateFilter, setDateFilter] = useState('');
   const [activeTab, setActiveTab] = useState('visitor');
+
+  const filteredVisitors = dateFilter
+    ? baseFilteredVisitors.filter(v => v.visitDate === dateFilter)
+    : baseFilteredVisitors;
+
 
   // User-Friendly Excel Exporter
   const exportExcel = (data, filename) => {
@@ -83,14 +89,12 @@ const ReportsDashboard = () => {
   const uniqueBranches = [...new Set(filteredVisitors.map(v => v.branch).filter(Boolean))];
   const branchReportData = uniqueBranches.map(branch => {
     const branchVisitors = filteredVisitors.filter(v => v.branch === branch);
-    const todayStr = new Date().toISOString().split('T')[0];
-    const visitorsToday = branchVisitors.filter(v => v.visitDate === todayStr).length;
     const inside = branchVisitors.filter(v => v.status === 'Inside').length;
     const completed = branchVisitors.filter(v => ['Completed', 'Exited'].includes(v.status)).length;
 
     return {
       "Branch": branch,
-      "Visitors Today": visitorsToday,
+      "Total Visitors": branchVisitors.length,
       "Inside": inside,
       "Completed": completed
     };
@@ -151,7 +155,14 @@ const ReportsDashboard = () => {
           <h1 className="text-2xl font-bold text-gray-900">System Reports</h1>
           <p className="text-gray-500 mt-1 print:hidden">Generate and export data across all modules.</p>
         </div>
-        <div className="flex space-x-3 print:hidden">
+        <div className="flex items-center space-x-3 print:hidden">
+          <input 
+            type="date"
+            value={dateFilter}
+            onChange={(e) => setDateFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-200 rounded-lg text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-[var(--color-brand-indigo)] focus:border-transparent bg-white shadow-sm"
+            title="Filter by Date"
+          />
           <button 
             onClick={() => exportExcel(activeTab === 'security' ? [
               { "Total Visitors": totalVisitors, "Approved": approvedVisitors, "Rejected": rejectedVisitors, "Inside": insideVisitors, "Checked Out": checkedOutVisitors }

@@ -19,6 +19,15 @@ const paymentSchema = new mongoose.Schema({
     unique: true,
     sparse: true
   },
+  paymentId: {
+    type: String
+  },
+  orderId: {
+    type: String
+  },
+  signature: {
+    type: String
+  },
   amount: {
     type: Number,
     required: true
@@ -41,8 +50,8 @@ const paymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['Paid', 'Pending', 'Failed'],
-    default: 'Paid'
+    enum: ['Paid', 'Pending', 'Failed', 'Created'],
+    default: 'Created'
   },
   durationDays: {
     type: Number,

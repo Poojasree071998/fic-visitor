@@ -8,7 +8,9 @@ import os from 'os';
 function getLocalIP() {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
-    for (const iface of interfaces[name]) {
+    const ifaces = interfaces[name];
+    if (!ifaces) continue;
+    for (const iface of ifaces) {
       if (iface.family === 'IPv4' && !iface.internal) {
         return iface.address;
       }
@@ -19,8 +21,12 @@ function getLocalIP() {
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  server: {
+    host: '0.0.0.0', // This exposes the server to your mobile phone!
+  },
   define: {
     'import.meta.env.VITE_NETWORK_IP': JSON.stringify(getLocalIP()),
+    'import.meta.env.VITE_API_URL': JSON.stringify(`http://${getLocalIP()}:5000`),
   },
   plugins: [
     tailwindcss(),

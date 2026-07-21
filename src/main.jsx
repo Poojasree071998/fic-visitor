@@ -2,6 +2,8 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
+import { getToken } from "firebase/messaging";
+import { messaging } from "./firebase";
 
 // Intercept all fetch requests to automatically append multi-tenant headers
 const originalFetch = window.fetch;
@@ -64,3 +66,27 @@ ReactDOM.createRoot(document.getElementById('app')).render(
     <App />
   </React.StrictMode>
 );
+
+async function requestNotificationPermission() {
+  try {
+    if (!('Notification' in window) || !messaging) {
+      console.log("This browser does not support notifications.");
+      return;
+    }
+    const permission = await Notification.requestPermission();
+
+    if (permission === "granted") {
+      const token = await getToken(messaging, {
+        vapidKey: "BMi4WOvwwzgiCpfLZj4rtSWDM0bHHL1ciowr6sbaGD6aQjSWsrkKae0Cfale0Q-Z8huo8grneu2XI5pEzfREgV"
+      });
+
+      console.log("FCM Token:", token);
+    } else {
+      console.log("Notification permission denied");
+    }
+  } catch (err) {
+    console.error(err);
+  }
+}
+
+requestNotificationPermission();

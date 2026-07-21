@@ -21,10 +21,10 @@ router.get('/companies', async (req, res) => {
     const companies = await Company.find().sort({ createdAt: -1 });
     const BranchSetting = require('../models/BranchSetting');
     const planLimits = require('../config/plans');
-    
+
     const enriched = [];
     for (const comp of companies) {
-      const adminUser = await User.findOne({ companyId: comp.code, role: 'Super Admin' });
+      const adminUser = await User.findOne({ companyId: comp.code, role: { $in: ['Super Admin', 'Company Admin'] } });
       const userCount = await User.countDocuments({ companyId: comp.code });
       const securityCount = await User.countDocuments({ companyId: comp.code, role: 'Security' });
       const visitorCount = await Visitor.countDocuments({ companyId: comp.code });
@@ -40,7 +40,7 @@ router.get('/companies', async (req, res) => {
         branchCount,
         limits,
         adminEmail: adminUser ? adminUser.email : 'N/A',
-        adminPassword: adminUser ? adminUser.password : 'N/A'
+        adminPassword: adminUser ? (adminUser.plainPassword || 'Hidden') : 'N/A'
       });
     }
     res.json(enriched);
@@ -69,7 +69,7 @@ router.patch('/companies/:id', async (req, res) => {
       comp.subscription = subscription;
       subscriptionChanged = true;
     }
-    
+
     if (durationDays) {
       if (comp.subscriptionExpiresAt && comp.status !== 'Expired' && new Date(comp.subscriptionExpiresAt) > new Date()) {
         newExpiry = new Date(comp.subscriptionExpiresAt);
@@ -79,7 +79,7 @@ router.patch('/companies/:id', async (req, res) => {
       newExpiry.setDate(newExpiry.getDate() + parseInt(durationDays, 10));
       comp.subscriptionExpiresAt = newExpiry;
       subscriptionChanged = true;
-      
+
       // If we are extending, ensure status becomes active
       if (comp.status === 'Expired') {
         comp.status = 'Active';
@@ -101,7 +101,7 @@ router.patch('/companies/:id', async (req, res) => {
         endDate: comp.subscriptionExpiresAt,
         updatedBy: req.userRole || 'SaaS Super Admin'
       });
-      
+
       // Calculate amount based on config
       const planLimits = require('../config/plans');
       const planPrice = planLimits[comp.subscription]?.price || 0;
@@ -110,7 +110,7 @@ router.patch('/companies/:id', async (req, res) => {
         if (parseInt(durationDays, 10) === 90) durationMultiplier = 3;
         else if (parseInt(durationDays, 10) === 365) durationMultiplier = 12;
       }
-      
+
       const Payment = require('../models/Payment');
       const invoiceNo = `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
       const amount = planPrice * durationMultiplier;
@@ -135,13 +135,14 @@ router.patch('/companies/:id', async (req, res) => {
     // Trigger Notifications for SaaS Super Admin
     const Notification = require('../models/Notification');
     const io = req.app.get('io');
-    
+
     if (statusChanged) {
       const typeStr = status === 'Active' ? 'Subscription Activated' : 'Subscription Deactivated';
       const icon = status === 'Active' ? '✅' : '❌';
       const newNotif = await Notification.create({
         companyId: 'SYSTEM',
-        type: 'Subscription',
+        type: status === 'Active' ? 'success' : 'warning',
+        module: 'Subscription',
         title: `${icon} ${typeStr}`,
         message: `${comp.name} subscription has been ${status.toLowerCase()}.`,
         createdBy: req.userRole || 'System'
@@ -150,32 +151,38 @@ router.patch('/companies/:id', async (req, res) => {
     } else if (subscriptionChanged) {
       const newNotif = await Notification.create({
         companyId: 'SYSTEM',
-        type: 'Subscription',
+        type: 'info',
+        module: 'Subscription',
         title: '💳 Subscription Updated',
         message: `${comp.name} updated to ${comp.subscription} plan. Payment recorded.`,
         createdBy: req.userRole || 'System'
       });
       if (io) io.emit('new_notification', newNotif);
-      
+
       // Also notify the tenant
       const tenantNotif = await Notification.create({
         companyId: comp.code,
-        type: 'Subscription',
+        type: 'success',
+        module: 'Subscription',
         title: '💳 Subscription Renewed',
         message: `Your subscription has been successfully renewed to the ${comp.subscription} plan.`,
         createdBy: 'System'
       });
       if (io) io.emit('new_notification', tenantNotif);
-      
+
       // Audit log
-      await logAction(req, `Subscription Upgraded to ${comp.subscription}`, 'Subscription', {
+      await logAction(req, `Subscription Upgraded`, 'Subscription', {
         companyId: comp.code,
-        companyName: comp.name
+        companyName: comp.name,
+        userId: req.user ? req.user._id : undefined,
+        description: `Subscription upgraded to ${comp.subscription} for company ${comp.name}`,
+        status: 'Success'
       });
     } else {
       const newNotif = await Notification.create({
         companyId: 'SYSTEM',
-        type: 'Tenant',
+        type: 'info',
+        module: 'Company',
         title: '🏢 Tenant Updated',
         message: `${comp.name} details have been updated.`,
         createdBy: req.userRole || 'System'
@@ -208,9 +215,9 @@ router.delete('/companies/:id', async (req, res) => {
     await Promise.all([
       User.deleteMany({ companyId: comp.code }),
       Visitor.deleteMany({ companyId: comp.code }),
-      Blacklist.deleteMany({ companyId: comp.code }).catch(() => {}),
-      Zone.deleteMany({ companyId: comp.code }).catch(() => {}),
-      Notification.deleteMany({ companyId: comp.code }).catch(() => {}),
+      Blacklist.deleteMany({ companyId: comp.code }).catch(() => { }),
+      Zone.deleteMany({ companyId: comp.code }).catch(() => { }),
+      Notification.deleteMany({ companyId: comp.code }).catch(() => { }),
     ]);
 
     await Company.findByIdAndDelete(req.params.id);
@@ -218,7 +225,8 @@ router.delete('/companies/:id', async (req, res) => {
     // Trigger Notification for Tenant Deleted
     const newNotification = await Notification.create({
       companyId: 'SYSTEM',
-      type: 'Tenant',
+      type: 'warning',
+      module: 'Company',
       title: '🗑 Tenant Deleted',
       message: `${comp.name} has been deleted.`,
       createdBy: req.userRole || 'System'
@@ -227,11 +235,14 @@ router.delete('/companies/:id', async (req, res) => {
     if (io) {
       io.emit('new_notification', newNotification);
     }
-    
+
     // Audit Log for deletion
-    await logAction(req, `Deleted Company: ${comp.name}`, 'Tenant Management', {
+    await logAction(req, `Company Deleted`, 'Tenant Management', {
       companyId: 'SYSTEM',
-      companyName: 'System Administration'
+      companyName: 'System Administration',
+      userId: req.user ? req.user._id : undefined,
+      description: `Company ${comp.name} was permanently deleted`,
+      status: 'Success'
     });
 
     res.json({ message: `Company '${comp.name}' (${comp.code}) and all its data have been permanently deleted.` });
@@ -244,7 +255,7 @@ router.delete('/companies/:id', async (req, res) => {
 router.post('/notify-company', async (req, res) => {
   try {
     const { companyId, title, message, type } = req.body;
-    
+
     if (!companyId || !title || !message) {
       return res.status(400).json({ message: 'Missing required fields' });
     }
@@ -252,7 +263,8 @@ router.post('/notify-company', async (req, res) => {
     const Notification = require('../models/Notification');
     const newNotif = await Notification.create({
       companyId: companyId,
-      type: type || 'System',
+      type: 'info',
+      module: type || 'System',
       title: title,
       message: message,
       createdBy: req.userRole || 'SaaS Super Admin'
@@ -263,9 +275,42 @@ router.post('/notify-company', async (req, res) => {
       io.emit('new_notification', newNotif);
     }
     
-    await logAction(req, `Sent ${type || 'System'} notification to company ${companyId}`, 'Tenant Management', {
+    // Trigger mobile push notification for the targeted company's super admins
+    try {
+      const sendPushNotification = require('../utils/pushNotificationService');
+      // Fetch target company admins
+      const companyAdmins = await User.find({
+        companyId: companyId,
+        role: { $in: ['Super Admin', 'Company Admin'] },
+        fcmToken: { $exists: true, $ne: '' }
+      });
+      
+      // Fetch the SaaS Super Admin who sent it (so they get a confirmation buzz when testing!)
+      const saasAdmins = await User.find({
+        role: 'SaaS Super Admin',
+        fcmToken: { $exists: true, $ne: '' }
+      });
+      
+      const allAdminsToNotify = [...companyAdmins, ...saasAdmins];
+      const tokens = allAdminsToNotify.map(admin => admin.fcmToken);
+      
+      if (tokens.length > 0) {
+        await sendPushNotification(tokens, title, message, {
+          notificationId: newNotif._id,
+          module: newNotif.module,
+          type: newNotif.type
+        });
+      }
+    } catch (pushErr) {
+      console.error('Error sending mobile push in notify-company:', pushErr);
+    }
+
+    await logAction(req, `Notification Sent`, 'Tenant Management', {
       companyId: 'SYSTEM',
-      companyName: 'System Administration'
+      companyName: 'System Administration',
+      userId: req.user ? req.user._id : undefined,
+      description: `Sent ${type || 'System'} notification to company ${companyId}`,
+      status: 'Success'
     });
 
     res.status(201).json({ message: 'Notification sent successfully', notification: newNotif });
@@ -293,13 +338,13 @@ router.get('/analytics', async (req, res) => {
     // Total Revenue (all time)
     const allPayments = await Payment.find({ status: 'Paid' });
     const totalRevenue = allPayments.reduce((sum, p) => sum + (p.total || p.amount || 0), 0);
-    
+
     // Today's Revenue
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
     const endOfToday = new Date();
     endOfToday.setHours(23, 59, 59, 999);
-    
+
     const paymentsToday = await Payment.find({
       paymentDate: { $gte: startOfToday, $lte: endOfToday },
       status: 'Paid'
@@ -364,7 +409,7 @@ router.patch('/upgrade-requests/:id', async (req, res) => {
 
     const UpgradeRequest = require('../models/UpgradeRequest');
     const upgradeReq = await UpgradeRequest.findById(req.params.id);
-    
+
     if (!upgradeReq) {
       return res.status(404).json({ message: 'Upgrade request not found' });
     }
@@ -382,22 +427,22 @@ router.patch('/upgrade-requests/:id', async (req, res) => {
       const company = await Company.findOne({ code: upgradeReq.companyId });
       if (company) {
         company.subscription = upgradeReq.requestedPlan;
-        
+
         let newExpiry = company.subscriptionExpiresAt && company.status !== 'Expired' && new Date(company.subscriptionExpiresAt) > new Date()
           ? new Date(company.subscriptionExpiresAt)
           : new Date();
-          
+
         newExpiry.setDate(newExpiry.getDate() + parseInt(upgradeReq.durationDays, 10));
         company.subscriptionExpiresAt = newExpiry;
         company.status = 'Active';
-        
+
         company.upgradeHistory.push({
           plan: company.subscription,
           startDate: new Date(),
           endDate: company.subscriptionExpiresAt,
           updatedBy: req.userRole || 'SaaS Super Admin'
         });
-        
+
         await company.save();
 
         // Create Payment record
@@ -423,7 +468,8 @@ router.patch('/upgrade-requests/:id', async (req, res) => {
         const Notification = require('../models/Notification');
         const newNotif = await Notification.create({
           companyId: company.code,
-          type: 'Subscription',
+          type: 'success',
+          module: 'Subscription',
           title: '🎉 Congratulations',
           message: `Your subscription has been upgraded to ${company.subscription}. It expires on ${company.subscriptionExpiresAt.toLocaleDateString()}.`,
           createdBy: req.userRole || 'System'

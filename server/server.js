@@ -4,13 +4,22 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const helmet = require('helmet');
+const xss = require('xss-clean');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"]
+    origin: function (origin, callback) {
+      if (!origin || process.env.NODE_ENV !== 'production') return callback(null, true);
+      const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ['*'];
+      if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error('CORS policy violation'), false);
+    },
+    methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
+    credentials: true
   }
 });
 
@@ -26,8 +35,33 @@ io.on('connection', (socket) => {
 const PORT = process.env.PORT || 5000;
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.set('trust proxy', 1);
+
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false
+}));
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || process.env.NODE_ENV !== 'production') return callback(null, true);
+    const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ['*'];
+    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return callback(null, true);
+    return callback(new Error('CORS policy violation'), false);
+  },
+  credentials: true
+}));
+
+app.use(express.json({ limit: '1mb' }));
+app.use(cookieParser());
+
+// Environment Variable Validation
+const requiredEnvVars = ['MONGO_URI', 'JWT_SECRET'];
+const missingVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+if (missingVars.length > 0) {
+  console.error(`❌ Missing critical environment variables: ${missingVars.join(', ')}`);
+  process.exit(1);
+}
 
 // MongoDB Connection
 console.log('Connecting to MongoDB...');
@@ -52,6 +86,9 @@ const superAdminRouter = require('./routes/superAdmin');
 const companyRouter = require('./routes/company');
 const auditLogsRouter = require('./routes/auditLogs');
 
+const paymentRoutes = require('./routes/paymentRoutes');
+const testNotification = require('./routes/testNotification');
+
 app.use('/api/visitors', visitorsRouter);
 app.use('/api/users', usersRouter);
 app.use('/api/auth', authRouter);
@@ -64,6 +101,8 @@ app.use('/api/branch-settings', branchSettingsRouter);
 app.use('/api/super-admin', superAdminRouter);
 app.use('/api/company', companyRouter);
 app.use('/api/audit-logs', auditLogsRouter);
+app.use('/api/payment', paymentRoutes);
+app.use('/api/test', testNotification);
 
 app.get('/api/network-ip', (req, res) => {
   const os = require('os');

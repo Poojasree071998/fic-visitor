@@ -9,10 +9,18 @@ const notificationSchema = new mongoose.Schema(
     branchId: {
       type: String,
     },
+    userId: {
+      type: String,
+    },
     type: {
       type: String,
-      required: true,
-      enum: ['Tenant', 'Visitor', 'Security', 'Attendance', 'Subscription', 'System', 'Announcement', 'Branch', 'Admin'],
+      default: 'info',
+      // The frontend can map these to icons/colors
+      // Keeping original enums just in case of old data, plus new ones
+      enum: ['success', 'warning', 'error', 'info', 'Tenant', 'Visitor', 'Security', 'Attendance', 'Subscription', 'System', 'Announcement', 'Branch', 'Admin'],
+    },
+    module: {
+      type: String,
     },
     title: {
       type: String,

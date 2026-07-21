@@ -42,7 +42,7 @@ router.get('/me', async (req, res) => {
 router.post('/request-upgrade', async (req, res) => {
   try {
     const { requestedPlan, amount, durationDays } = req.body;
-    
+
     if (!requestedPlan || !amount || !durationDays) {
       return res.status(400).json({ message: 'Missing required upgrade details' });
     }
@@ -50,12 +50,12 @@ router.post('/request-upgrade', async (req, res) => {
     const Company = require('../models/Company');
     const Notification = require('../models/Notification');
     const UpgradeRequest = require('../models/UpgradeRequest');
-    
+
     const company = await Company.findOne({ code: req.companyId });
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }
-    
+
     // Create Upgrade Request record
     const upgradeReq = await UpgradeRequest.create({
       companyId: company.code,
@@ -70,7 +70,8 @@ router.post('/request-upgrade', async (req, res) => {
     // Send a notification to the SaaS Super Admin (SYSTEM)
     const newNotif = await Notification.create({
       companyId: 'SYSTEM',
-      type: 'Subscription',
+      type: 'info',
+      module: 'Subscription',
       title: '📈 Subscription Upgrade Requested',
       message: `${company.name} requested to upgrade to ${requestedPlan} for ₹${amount}.`,
       createdBy: req.userRole || 'System'
@@ -98,7 +99,7 @@ router.post('/request-upgrade', async (req, res) => {
 router.post('/mock-payment', async (req, res) => {
   try {
     const { requestedPlan, amount, durationDays } = req.body;
-    
+
     if (!requestedPlan || !amount || !durationDays) {
       return res.status(400).json({ message: 'Missing required payment details' });
     }
@@ -106,27 +107,28 @@ router.post('/mock-payment', async (req, res) => {
     const Company = require('../models/Company');
     const Notification = require('../models/Notification');
     const User = require('../models/User');
-    
+
     const company = await Company.findOne({ code: req.companyId });
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }
-    
+
     // Automatically activate the subscription
     company.subscription = requestedPlan;
     company.status = 'Active';
-    
+
     // Set new expiry date
     const newExpiry = new Date();
     newExpiry.setDate(newExpiry.getDate() + parseInt(durationDays, 10));
     company.subscriptionExpiresAt = newExpiry;
-    
+
     await company.save();
 
     // Send a notification to the SaaS Super Admin (SYSTEM)
     const newNotif = await Notification.create({
       companyId: 'SYSTEM',
-      type: 'Subscription',
+      type: 'success',
+      module: 'Subscription',
       title: '✅ Automatic Subscription Activated',
       message: `${company.name} successfully paid ₹${amount} and upgraded to ${requestedPlan} (Valid for ${durationDays} days).`,
       createdBy: req.userRole || 'System'
@@ -143,8 +145,8 @@ router.post('/mock-payment', async (req, res) => {
       await sendEmail(companyAdmin.email, EmailTemplates.paymentReceived(company.name, requestedPlan, amount).subject, EmailTemplates.paymentReceived(company.name, requestedPlan, amount).body);
     }
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'Payment successful. Subscription is now active.',
       subscription: company.subscription,
       subscriptionExpiresAt: company.subscriptionExpiresAt
@@ -186,7 +188,7 @@ router.get('/usage', async (req, res) => {
       companyId: req.companyId,
       createdAt: { $gte: startOfMonth }
     });
-    
+
     const securityCount = await User.countDocuments({ companyId: req.companyId, role: 'Security' });
     const branchCount = await BranchSetting.countDocuments({ companyId: req.companyId });
 
@@ -208,7 +210,7 @@ router.get('/usage', async (req, res) => {
 router.patch('/branding', async (req, res) => {
   try {
     const { logoUrl, primaryColor } = req.body;
-    
+
     // Only the Super Admin of the company can change branding
     if (req.userRole !== 'Super Admin') {
       return res.status(403).json({ message: 'Forbidden: Only Super Admin can update branding' });
@@ -216,11 +218,11 @@ router.patch('/branding', async (req, res) => {
 
     const Company = require('../models/Company');
     const company = await Company.findOne({ code: req.companyId });
-    
+
     if (!company) {
       return res.status(404).json({ message: 'Company not found' });
     }
-    
+
     // Check if the plan allows custom branding
     if (!['Standard', 'Enterprise'].includes(company.subscription)) {
       return res.status(403).json({ message: 'Custom branding requires Standard or Enterprise plan.' });
@@ -228,9 +230,9 @@ router.patch('/branding', async (req, res) => {
 
     if (logoUrl !== undefined) company.branding.logoUrl = logoUrl;
     if (primaryColor !== undefined) company.branding.primaryColor = primaryColor;
-    
+
     await company.save();
-    
+
     await logAction(req, 'Update Branding', 'Configuration', {
       primaryColor: company.branding.primaryColor
     });

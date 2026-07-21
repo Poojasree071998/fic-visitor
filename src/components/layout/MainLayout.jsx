@@ -17,12 +17,24 @@ const MainLayout = () => {
 
     const expiry = new Date(user.subscriptionExpiresAt);
     const now = new Date();
-    const diffTime = expiry - now;
+    
+    // Check calendar dates directly for Today / Tomorrow
+    const isToday = expiry.getDate() === now.getDate() && 
+                    expiry.getMonth() === now.getMonth() && 
+                    expiry.getFullYear() === now.getFullYear();
+                    
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const isTomorrow = expiry.getDate() === tomorrow.getDate() && 
+                       expiry.getMonth() === tomorrow.getMonth() && 
+                       expiry.getFullYear() === tomorrow.getFullYear();
+
+    const diffTime = expiry.getTime() - now.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-    if (diffDays < 0) return null; // handled by isExpired redirect
-    if (diffDays === 0) return 'Your subscription expires today.';
-    if (diffDays === 1) return 'Your subscription expires tomorrow.';
+    if (diffTime < 0) return null; // handled by isExpired redirect
+    if (isToday) return 'Your subscription expires today.';
+    if (isTomorrow) return 'Your subscription expires tomorrow.';
     if (diffDays === 3) return 'Your subscription expires in 3 days.';
     if (diffDays === 7) return 'Your subscription expires in 7 days.';
     if (user?.subscription === 'One Day Trial' && diffDays < 7) {

@@ -6,7 +6,8 @@ import { Bell, User, MapPin, Check, Menu, Trash2, ExternalLink } from 'lucide-re
 import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 
-const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/notifications`;
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.match(/^\d{1,3}\./);
+const API_URL = `${import.meta.env.VITE_API_URL || (isLocalhost ? `http://${window.location.hostname}:5000` : 'https://zone-monitor.onrender.com')}/api/notifications`;
 
 const Header = ({ toggleSidebar, isSidebarOpen }) => {
   const { user } = useAuth();
@@ -53,7 +54,10 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
   useEffect(() => {
     fetchNotifications();
     
-    const socket = io(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}`);
+    const socketUrl = import.meta.env.VITE_API_URL 
+      ? import.meta.env.VITE_API_URL.replace('/api', '')
+      : (isLocalhost ? `http://${window.location.hostname}:5000` : 'https://zone-monitor.onrender.com');
+    const socket = io(socketUrl);
     
     socket.on('new_notification', (notification) => {
       let queryBranch = user?.branch;
@@ -67,8 +71,8 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
       }
 
       if (user?.role === 'SaaS Super Admin') {
-        const saasTypes = ['Tenant', 'Subscription', 'System', 'Branch', 'Admin', 'Announcement'];
-        if (!saasTypes.includes(notification.type)) {
+        const saasTypes = ['Tenant', 'Subscription', 'System', 'Branch', 'Admin', 'Announcement', 'info', 'success', 'warning'];
+        if (!saasTypes.includes(notification.type) && notification.createdBy !== 'SaaS Super Admin') {
           return;
         }
       } else if (user?.role !== 'SaaS Super Admin' && notification.companyId !== 'SYSTEM' && notification.companyId !== user?.companyId) {
@@ -173,7 +177,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
           </button>
           
           {showDropdown && (
-            <div className="fixed top-16 left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:right-0 sm:mt-2 sm:w-[380px] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col max-h-[80vh] sm:max-h-[85vh] overflow-hidden">
+            <div className="fixed top-16 left-4 right-4 sm:absolute sm:top-auto sm:left-auto sm:-right-4 sm:mt-2 sm:w-[380px] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 flex flex-col max-h-[80vh] sm:max-h-[85vh] overflow-hidden">
               <div className="p-3 sm:p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80 shrink-0">
                 <div className="flex items-center gap-2">
                   <h3 className="font-semibold text-gray-800">Notifications</h3>

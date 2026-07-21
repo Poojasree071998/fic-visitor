@@ -1,13 +1,24 @@
 const express = require('express');
 const router = express.Router();
+const sendPushNotification = require('../utils/pushNotificationService');
 const User = require('../models/User');
 const logAction = require('../utils/auditLogger');
 const { sendEmail, EmailTemplates } = require('../utils/emailService');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcrypt');
+
+const rateLimit = require('express-rate-limit');
+
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Temporarily increased from 5 to allow testing
+  message: { message: 'Too many login attempts from this IP, please try again after 15 minutes' }
+});
 
 // POST login
-router.post('/login', async (req, res) => {
+router.post('/login', loginLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, fcmToken } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ message: 'Email and password are required' });
@@ -17,25 +28,15 @@ router.post('/login', async (req, res) => {
     const user = await User.findOne({ email: email.toLowerCase() });
     
     if (!user) {
-      // Special hardcoded bootstrap admin to prevent lockout if DB is wiped/missing users
-      if (email === 'saas@fic.com' && password === 'saas123') {
-        return res.json({ id: 'bootstrap-saas', name: 'SaaS Platform Owner', email: 'saas@fic.com', role: 'SaaS Super Admin', branch: 'All Branches', companyId: 'SYSTEM', companyName: 'System Administration' });
-      }
-      if (email === 'sandeep@gmail.com' && password === 'sandeep') {
-        return res.json({ id: 'bootstrap-admin', name: 'Sandeep', email: 'sandeep@gmail.com', role: 'Super Admin', branch: 'All Branches', companyId: 'FIC001', companyName: 'FIC Group' });
-      }
-      if (email === 'vaidee@gmail.com' && password === 'vaidee') {
-        return res.json({ id: 'bootstrap-vaidee', name: 'Vaideeswari', email: 'vaidee@gmail.com', role: 'Admin', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
-      }
-      if (email === 'sabari@gmail.com' && password === 'sabari') {
-        return res.json({ id: 'bootstrap-sabari', name: 'Sabari', email: 'sabari@gmail.com', role: 'Security', branch: 'HEAD OFFICE(KRISHNAGIRI)', companyId: 'FIC001', companyName: 'FIC Group' });
-      }
+
 
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
-    // In a real app, use bcrypt.compare here
-    if (user.password !== password) {
+    // Compare password using bcrypt
+    const isMatch = await bcrypt.compare(password, user.password);
+    // Fallback for plaintext passwords during migration
+    if (!isMatch && user.password !== password) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
 
@@ -111,6 +112,12 @@ router.post('/login', async (req, res) => {
       }
     }
 
+    // Save Firebase FCM Token
+    if (fcmToken) {
+      user.fcmToken = fcmToken;
+      await user.save();
+    }
+
     // Return user data without password
     const u = user.toJSON();
     delete u.password;
@@ -118,6 +125,7 @@ router.post('/login', async (req, res) => {
     // Explicitly construct the response object to ensure properties are added
     const responsePayload = {
       ...u,
+      branch: u.branchId,
       companyName: company ? company.name : (u.companyId === 'SYSTEM' ? 'System Administration' : undefined),
       isExpired,
       subscription,
@@ -125,12 +133,48 @@ router.post('/login', async (req, res) => {
       branding: company?.branding || { logoUrl: '', primaryColor: '#1E1B6E' }
     };
 
+    // Generate Access Token (15m)
+    const token = jwt.sign(
+      { userId: u.id, companyId: responsePayload.companyId, role: responsePayload.role },
+      process.env.JWT_SECRET || 'fallback_secret_key_123',
+      { expiresIn: '15m' }
+    );
+
+    // Generate Refresh Token (7d)
+    const RefreshToken = require('../models/RefreshToken');
+    const crypto = require('crypto');
+    const refreshTokenString = crypto.randomBytes(40).toString('hex');
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 7);
+
+    // Multiple devices can be logged in simultaneously now.
+    // We do not delete all old refresh tokens to allow mobile and desktop concurrent sessions.
+    await RefreshToken.create({
+      token: refreshTokenString,
+      userId: u.id,
+      expiryDate: expiryDate
+    });
+
+    // Set Refresh Token as HttpOnly Cookie
+    res.cookie('refreshToken', refreshTokenString, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    // Attach token to response payload
+    responsePayload.token = token;
+
     // Log the action manually since req.user isn't set yet
-    await logAction(req, 'Login', 'Authentication', {
+    await logAction(req, 'User Login', 'Authentication', {
       companyId: responsePayload.companyId,
       companyName: responsePayload.companyName,
+      userId: responsePayload.id || responsePayload._id,
       userName: responsePayload.name,
-      role: responsePayload.role
+      role: responsePayload.role,
+      description: `User ${responsePayload.email} logged in successfully`,
+      status: 'Success'
     });
     
     res.json(responsePayload);
@@ -197,15 +241,20 @@ router.post('/register-company', async (req, res) => {
     });
     await company.save();
 
-    // Create the Company Admin (Super Admin role in their company context)
+    // Hash the password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create the Company Admin
     const user = new User({
       companyId: code,
       name: adminName,
       email: email.toLowerCase(),
       mobileNumber,
-      password, // Plain text for testing purposes
-      role: 'Super Admin',
-      branch: 'All Branches',
+      password: hashedPassword,
+      plainPassword: password,
+      role: 'Company Admin', // Updated to new role
+      branchId: 'All Branches',
       status: 'Active',
       createdBy: 'Self-Registration'
     });
@@ -215,22 +264,62 @@ router.post('/register-company', async (req, res) => {
     const Notification = require('../models/Notification');
     const newNotification = await Notification.create({
       companyId: 'SYSTEM', // System-level notification for SaaS Super Admin
-      type: 'Tenant',
+      type: 'success',
+      module: 'Company',
       title: '🏢 New Tenant Added',
       message: `${companyName} has been added to the platform.`,
       createdBy: 'System'
     });
+
+    // 1. Send real-time dashboard notification using Socket.IO
     const io = req.app.get('io');
+    
     if (io) {
       io.emit('new_notification', newNotification);
+    }
+    
+    // 2. Find SaaS Super Admin mobile tokens
+    const saasAdmins = await User.find({
+      role: 'SaaS Super Admin',
+      fcmToken: {
+        $exists: true,
+        $ne: ''
+      }
+    });
+    
+    const adminTokens = saasAdmins
+      .map(admin => admin.fcmToken)
+      .filter(Boolean);
+    
+    console.log('SaaS Admin push tokens:', adminTokens);
+    
+    // 3. Send mobile push notification
+    if (adminTokens.length > 0) {
+      await sendPushNotification(
+        adminTokens,
+        newNotification.title,
+        newNotification.message,
+        {
+          notificationId: newNotification._id.toString(),
+          type: newNotification.type,
+          module: newNotification.module
+        }
+      );
+    
+      console.log('Mobile push notification sent');
+    } else {
+      console.log('No SaaS Super Admin mobile token found');
     }
 
     // Log the action
     await logAction(req, 'Company Created', 'Tenant Management', {
       companyId: 'SYSTEM',
       companyName: 'System Administration',
+      userId: user._id,
       userName: adminName,
-      role: 'SaaS Super Admin'
+      role: 'SaaS Super Admin',
+      description: `Company ${companyName} (${code}) was created by self-registration`,
+      status: 'Success'
     });
 
     // Send mock email
@@ -328,3 +417,60 @@ router.post('/mock-payment', async (req, res) => {
 });
 
 module.exports = router;
+
+// POST /refresh - Refresh Access Token
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+    
+    if (!refreshToken) {
+      return res.status(403).json({ message: 'Refresh token is required' });
+    }
+
+    const RefreshToken = require('../models/RefreshToken');
+    const tokenDoc = await RefreshToken.findOne({ token: refreshToken }).populate('userId');
+
+    if (!tokenDoc) {
+      return res.status(403).json({ message: 'Refresh token is not in database' });
+    }
+
+    if (RefreshToken.verifyExpiration(tokenDoc)) {
+      await RefreshToken.findByIdAndDelete(tokenDoc._id);
+      return res.status(403).json({ message: 'Refresh token has expired. Please make a new login request' });
+    }
+
+    const user = tokenDoc.userId;
+    const newAccessToken = jwt.sign(
+      { userId: user._id, companyId: user.companyId, role: user.role },
+      process.env.JWT_SECRET || 'fallback_secret_key_123',
+      { expiresIn: '15m' }
+    );
+
+    res.status(200).json({
+      token: newAccessToken,
+    });
+  } catch (err) {
+    console.error('Refresh token error:', err);
+    res.status(500).send({ message: err.message });
+  }
+});
+
+// POST /logout - Clear Refresh Token
+router.post('/logout', async (req, res) => {
+  try {
+    const { refreshToken } = req.cookies;
+    if (refreshToken) {
+      const RefreshToken = require('../models/RefreshToken');
+      await RefreshToken.findOneAndDelete({ token: refreshToken });
+    }
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+    });
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (err) {
+    console.error('Logout error:', err);
+    res.status(500).json({ message: err.message });
+  }
+});

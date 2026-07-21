@@ -35,7 +35,7 @@ module.exports = async (req, res, next) => {
           return res.status(404).json({ message: 'Company code is invalid' });
         }
 
-        const isUpgradeRequest = req.path.includes('/request-upgrade') || req.path.includes('/me');
+        const isUpgradeRequest = req.originalUrl.includes('/request-upgrade') || req.originalUrl.includes('/me') || req.originalUrl.includes('/payment');
 
         if (company.status !== 'Active' && userRole !== 'SaaS Super Admin' && !isUpgradeRequest) {
           return res.status(403).json({ 

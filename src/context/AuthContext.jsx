@@ -1,4 +1,6 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
+import { getMessaging, getToken } from "firebase/messaging";
+import { app } from "../firebase";
 
 const AuthContext = createContext(null);
 
@@ -8,29 +10,60 @@ export const AuthProvider = ({ children }) => {
     return saved ? JSON.parse(saved) : null;
   });
 
-  // Global API Interceptor (Phase 25)
+  // Global API Interceptor (Phase 25 & Step 8)
   useEffect(() => {
     const originalFetch = window.fetch;
     window.fetch = async (...args) => {
-      const response = await originalFetch(...args);
-      // Only intercept 403 Forbidden responses
+      let response = await originalFetch(...args);
+      
+      // Handle 401 Unauthorized - Attempt Silent Refresh
+      if (response.status === 401) {
+        const refreshUrl = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/auth/refresh`;
+        // Prevent infinite loops if the refresh itself is 401
+        if (args[0] !== refreshUrl) {
+          try {
+            const refreshRes = await originalFetch(refreshUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              // credentials: 'omit' is default, but cookies must be sent for refresh
+              credentials: 'include' 
+            });
+            if (refreshRes.ok) {
+              const refreshData = await refreshRes.json();
+              // Update token
+              localStorage.setItem('token', refreshData.token);
+              updateUser({ token: refreshData.token });
+              
+              // Retry original request with new token
+              const retryOpts = args[1] || {};
+              const retryHeaders = new Headers(retryOpts.headers || {});
+              retryHeaders.set('Authorization', `Bearer ${refreshData.token}`);
+              
+              response = await originalFetch(args[0], { ...retryOpts, headers: retryHeaders });
+            } else {
+              // Refresh failed, force logout
+              logout();
+            }
+          } catch (err) {
+            console.error('Refresh token error', err);
+            logout();
+          }
+        }
+      }
+
+      // Handle 403 Forbidden - Subscription Expiry
       if (response.status === 403) {
-        // Clone the response so the original caller can still parse it if needed
         const clone = response.clone();
         try {
           const data = await clone.json();
-          // Backend returned subscription expired
           if (data.subscriptionExpired) {
             updateUser({ isExpired: true });
           }
-        } catch (err) {
-          // Ignore parsing errors for non-JSON 403s
-        }
+        } catch (err) {}
       }
       return response;
     };
 
-    // Cleanup on unmount
     return () => {
       window.fetch = originalFetch;
     };
@@ -41,16 +74,34 @@ export const AuthProvider = ({ children }) => {
       const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/auth/login`;
       console.log('Attempting login to:', url);
       
+      let fcmToken = "";
+
+      if (window.REACT_NATIVE_PUSH_TOKEN) {
+        fcmToken = window.REACT_NATIVE_PUSH_TOKEN;
+        console.log("Using React Native Expo Push Token:", fcmToken);
+      } else {
+        try {
+          const messaging = getMessaging(app);
+          fcmToken = await getToken(messaging, {
+            vapidKey: "BMi4WOvwwzgiCpfLZj4rtSWDM0bHHL1ciowr6sbaGD6aQjSWsrkKae0Cfale0Q-Z8huo8grneu2XI5pEzfREgV"
+          });
+          console.log("FCM Token:", fcmToken);
+        } catch (error) {
+          console.log("FCM Error:", error);
+        }
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password, fcmToken })
       });
 
       const userData = await response.json();
 
       if (response.ok) {
         setUser(userData);
+        localStorage.setItem('token', userData.token); // Explicitly store token
         if (rememberMe) {
           localStorage.setItem('zmvms_user', JSON.stringify(userData));
         } else {
@@ -65,10 +116,17 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/auth/logout`;
+      await fetch(url, { method: 'POST', credentials: 'include' });
+    } catch(err) {
+      console.error(err);
+    }
     setUser(null);
     localStorage.removeItem('zmvms_user');
     sessionStorage.removeItem('zmvms_user');
+    localStorage.removeItem('token'); // Clear token
     localStorage.removeItem('zmvms_visitors');
     sessionStorage.removeItem('zmvms_visitors');
   };

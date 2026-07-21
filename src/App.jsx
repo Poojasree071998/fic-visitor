@@ -11,6 +11,7 @@ import ToastContainer from './components/notifications/ToastContainer';
 import SubscriptionReminders from './components/subscription/SubscriptionReminders';
 import SubscriptionSuccessModal from './components/subscription/SubscriptionSuccessModal';
 import { ShieldAlert } from 'lucide-react';
+import { requestNotificationPermission, listenNotification } from './firebaseMessaging';
 
 // Layouts
 import MainLayout from './components/layout/MainLayout';
@@ -86,29 +87,33 @@ const AppRoutes = () => {
         <Route path="notifications" element={<ProtectedRoute allowedRoles={['SaaS Super Admin', 'Super Admin', 'MD', 'Admin', 'Branch Admin', 'Security', 'HR']}><NotificationsPage /></ProtectedRoute>} />
         
         {/* User Management */}
-        <Route path="users" element={<ProtectedRoute allowedRoles={['Super Admin']}><UserList /></ProtectedRoute>} />
-        <Route path="users/new" element={<ProtectedRoute allowedRoles={['Super Admin']}><UserForm /></ProtectedRoute>} />
-        <Route path="branches" element={<ProtectedRoute allowedRoles={['Super Admin']}><BranchSettings /></ProtectedRoute>} />
+        <Route path="users" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin']}><UserList /></ProtectedRoute>} />
+        <Route path="users/new" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin']}><UserForm /></ProtectedRoute>} />
+        <Route path="branches" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin']}><BranchSettings /></ProtectedRoute>} />
         
         {/* Visitor Management */}
-        <Route path="visitors" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><VisitorList /></ProtectedRoute>} />
-        <Route path="visitors/new" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><VisitorForm /></ProtectedRoute>} />
-        <Route path="visitors/returning" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><ReturningVisitor /></ProtectedRoute>} />
+        <Route path="visitors" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'Security', 'HR', 'Receptionist']}><VisitorList /></ProtectedRoute>} />
+        <Route path="visitors/new" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'Security', 'HR', 'Receptionist']}><VisitorForm /></ProtectedRoute>} />
+        <Route path="visitors/returning" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'Security', 'HR', 'Receptionist']}><ReturningVisitor /></ProtectedRoute>} />
         
         {/* Approvals Module */}
-        <Route path="approvals" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'HR']}><ApprovalList /></ProtectedRoute>} />
-        <Route path="approvals/:id" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'HR']}><ApprovalDetails /></ProtectedRoute>} />
+        <Route path="approvals" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'HR', 'Receptionist']}><ApprovalList /></ProtectedRoute>} />
+        <Route path="approvals/:id" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'HR', 'Receptionist']}><ApprovalDetails /></ProtectedRoute>} />
         
-        {/* Other Modules */}
-        <Route path="live-monitoring" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><LiveMonitoring /></ProtectedRoute>} />
-        <Route path="zones" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><ZoneList /></ProtectedRoute>} />
-        <Route path="tracking" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security', 'HR']}><EntryExitLogs /></ProtectedRoute>} />
-        <Route path="attendance" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><AttendanceLog /></ProtectedRoute>} />
-        <Route path="blacklist" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Security']}><BlacklistList /></ProtectedRoute>} />
-        <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><ReportsDashboard /></ProtectedRoute>} />
-        <Route path="subscription" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><Subscription /></ProtectedRoute>} />
-        <Route path="audit-logs" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin']}><AuditLogs /></ProtectedRoute>} />
-        <Route path="settings" element={<ProtectedRoute allowedRoles={['Super Admin', 'MD', 'Admin', 'Visitor', 'HR']}><Settings /></ProtectedRoute>} />
+        {/* Tracking & Zones */}
+        <Route path="zones" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin']}><ZoneList /></ProtectedRoute>} />
+        <Route path="live-monitoring" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'Security']}><LiveMonitoring /></ProtectedRoute>} />
+        <Route path="attendance" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'HR']}><AttendanceLog /></ProtectedRoute>} />
+        <Route path="logs" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin']}><EntryExitLogs /></ProtectedRoute>} />
+        <Route path="audit-logs" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin']}><AuditLogs /></ProtectedRoute>} />
+        
+        {/* Blacklist */}
+        <Route path="blacklist" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'Security', 'Receptionist']}><BlacklistList /></ProtectedRoute>} />
+        
+        {/* Reports & Settings */}
+        <Route path="reports" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'HR']}><ReportsDashboard /></ProtectedRoute>} />
+        <Route path="subscription" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin']}><Subscription /></ProtectedRoute>} />
+        <Route path="settings" element={<ProtectedRoute allowedRoles={['Super Admin', 'Company Admin', 'MD', 'Admin', 'Visitor', 'HR', 'Receptionist', 'Employee']}><Settings /></ProtectedRoute>} />
 
       </Route>
     </Routes>
@@ -116,6 +121,11 @@ const AppRoutes = () => {
 };
 
 function App() {
+  useEffect(() => {
+    requestNotificationPermission();
+    listenNotification();
+  }, []);
+
   return (
     <Router>
       <AuthProvider>

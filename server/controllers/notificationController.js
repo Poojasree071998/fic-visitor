@@ -7,8 +7,12 @@ exports.getNotifications = async (req, res) => {
 
     // Role-based filtering based on Step 4 of user request
     if (role === 'SaaS Super Admin') {
-      // SaaS Super Admin only sees platform-level notifications
-      query.type = { $in: ['Tenant', 'Subscription', 'System', 'Branch', 'Admin', 'Announcement'] };
+      // SaaS Super Admin sees platform-level notifications AND notifications they sent
+      query.$or = [
+        { type: { $in: ['Tenant', 'Subscription', 'System', 'Branch', 'Admin', 'Announcement'] } },
+        { createdBy: 'SaaS Super Admin' },
+        { companyId: 'SYSTEM' }
+      ];
     } else if (role === 'Super Admin') {
       // Tenant Super Admin sees everything for their own company
       query.companyId = req.companyId;

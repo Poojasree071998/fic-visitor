@@ -9,6 +9,9 @@ const auditLogSchema = new mongoose.Schema({
   companyName: {
     type: String
   },
+  userId: {
+    type: String
+  },
   userName: {
     type: String,
     required: true
@@ -25,8 +28,18 @@ const auditLogSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  description: {
+    type: String
+  },
   ipAddress: {
     type: String
+  },
+  deviceInfo: {
+    type: String
+  },
+  status: {
+    type: String,
+    default: 'Success'
   }
 }, { timestamps: true });
 

@@ -29,10 +29,9 @@ const Subscription = () => {
         setCompanyDetails(data);
         
         // Fetch history
-        const histRes = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/company/subscription-history`, {
+        const histRes = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/payment/history`, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`,
-            'X-Company-Id': user?.companyId
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
         if (histRes.ok) {

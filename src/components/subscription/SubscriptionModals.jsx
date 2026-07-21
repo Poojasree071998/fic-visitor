@@ -14,7 +14,7 @@ const SubscriptionModals = () => {
   useEffect(() => {
     const handleLock = (e) => {
       if (user?.role !== 'SaaS Super Admin') {
-        setMode('lock');
+        setMode(prev => (prev === 'none' ? 'lock' : prev));
       }
     };
     const handleOpenModal = (e) => {
@@ -44,42 +44,119 @@ const SubscriptionModals = () => {
     setMode('payment');
   };
 
+  const loadRazorpay = () => {
+    return new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
     setIsProcessing(true);
     
-    // Simulate payment gateway delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
+    const res = await loadRazorpay();
+    if (!res) {
+      alert('Razorpay SDK failed to load. Are you online?');
+      setIsProcessing(false);
+      return;
+    }
+
     try {
-      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/company/request-upgrade`;
-      const response = await fetch(url, {
+      const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com');
+      
+      const orderRes = await fetch(`${baseUrl}/api/payment/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-          'X-Company-Id': user?.companyId
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
         },
         body: JSON.stringify({
-          requestedPlan: selectedPlan.name,
-          amount: selectedPlan.price,
+          amount: selectedPlan.price + Math.round(selectedPlan.price * 0.18),
+          plan: selectedPlan.name,
           durationDays: 30
         })
       });
       
-      const data = await response.json();
+      const orderData = await orderRes.json();
       
-      if (response.ok) {
-        setTransactionId('TXN' + Math.floor(Math.random() * 1000000));
-        localStorage.setItem('zmvms_pending_upgrade', 'true');
-        setMode('success');
-      } else {
-        alert(data.message || 'Failed to process payment.');
-        setMode('choose_plan');
+      if (!orderRes.ok) {
+        alert(orderData.message || 'Error creating order');
+        setIsProcessing(false);
+        return;
       }
+
+      if (orderData.keyId === 'rzp_test_fallback_id') {
+        alert('Payment Configuration Missing: Please add RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to your backend .env file to enable checkout.');
+        setIsProcessing(false);
+        return;
+      }
+
+      const options = {
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        name: 'Zone Monitor',
+        description: `Upgrade to ${selectedPlan.name} Plan`,
+        order_id: orderData.orderId,
+        handler: async function (response) {
+          try {
+            const verifyRes = await fetch(`${baseUrl}/api/payment/verify`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('token')}`
+              },
+              body: JSON.stringify({
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+            
+            const verifyData = await verifyRes.json();
+            
+            if (verifyRes.ok) {
+              setTransactionId(response.razorpay_payment_id);
+              localStorage.removeItem('zmvms_pending_upgrade');
+              
+              updateUser({
+                isExpired: false,
+                subscription: selectedPlan.name,
+                subscriptionExpiresAt: verifyData.subscriptionExpiresAt
+              });
+              
+              setMode('success');
+            } else {
+              alert(verifyData.message || 'Payment verification failed');
+            }
+          } catch (err) {
+            console.error(err);
+            alert('Verification Error');
+          }
+        },
+        prefill: {
+          name: user?.name || '',
+          email: user?.email || '',
+          contact: ''
+        },
+        theme: {
+          color: '#1E1B6E'
+        }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.on('payment.failed', function (response) {
+        alert('Payment Failed: ' + response.error.description);
+      });
+      paymentObject.open();
+
     } catch (err) {
-      alert('Network error while processing payment.');
-      setMode('choose_plan');
+      console.error(err);
+      alert(err.message || 'Network error while processing payment.');
     } finally {
       setIsProcessing(false);
     }
@@ -184,6 +261,7 @@ const SubscriptionModals = () => {
               </button>
               <div className="flex space-x-3">
                 <button
+                  onClick={() => window.open(`https://wa.me/916369406416?text=Hi,%20I%20need%20Subscription%20Support%20for%20company:%20${user?.companyName || user?.companyId}`, '_blank')}
                   className="flex-1 bg-white text-gray-700 border border-gray-300 rounded-xl py-3 font-semibold hover:bg-gray-50 transition-colors"
                 >
                   Contact Support
@@ -202,7 +280,13 @@ const SubscriptionModals = () => {
 
       {/* 2. CHOOSE PLAN (Step 1) */}
       {mode === 'choose_plan' && (
-        <div className="bg-white rounded-2xl p-6 md:p-8 max-w-5xl w-full shadow-2xl overflow-y-auto hide-scrollbar max-h-[90vh]">
+        <div className="bg-white rounded-2xl p-6 md:p-8 max-w-5xl w-full shadow-2xl overflow-y-auto hide-scrollbar max-h-[90vh] relative">
+          <button 
+            onClick={handleClose}
+            className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X size={24} />
+          </button>
           
           <WizardStepper step={1} />
           
@@ -352,30 +436,27 @@ const SubscriptionModals = () => {
               <span className="font-bold text-gray-900">{selectedPlan?.name}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-500">Amount</span>
+              <span className="text-sm font-medium text-gray-500">Amount Paid</span>
               <span className="font-bold text-gray-900">₹{selectedPlan?.price + Math.round(selectedPlan?.price * 0.18)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm font-medium text-gray-500">Status</span>
-              <span className="font-bold text-orange-600">Pending Approval</span>
+              <span className="font-bold text-green-600">Active</span>
             </div>
           </div>
           
           <p className="text-sm text-gray-600 mb-8 px-4 font-medium">
-            Your request has been sent for SaaS Admin approval. The dashboard will automatically unlock once approved.
+            Your subscription has been activated successfully. You now have full access to all features on your dashboard.
           </p>
           
           <button
             onClick={() => {
-              if (user?.isExpired) {
-                window.location.reload();
-              } else {
-                handleClose();
-              }
+              setMode('none');
+              window.location.reload();
             }}
             className="w-full bg-[#1E1B6E] text-white rounded-xl py-3.5 font-bold hover:bg-indigo-900 transition-colors shadow-lg"
           >
-            Check Status / Refresh
+            Go to Dashboard
           </button>
         </div>
       )}
