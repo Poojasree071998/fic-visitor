@@ -17,7 +17,7 @@ const VisitorPass = () => {
 
   const fetchVisitor = async () => {
     try {
-      const apiUrl = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/visitors/pass/${visitId}`;
+      const apiUrl = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/visitors/pass/${visitId}`;
       const response = await fetch(apiUrl);
       if (!response.ok) {
         throw new Error('Visitor pass not found or invalid QR code.');
@@ -55,7 +55,7 @@ const VisitorPass = () => {
         };
       }
 
-      const apiUrl = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/visitors/${visitor.id}/zone`;
+      const apiUrl = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/visitors/${visitor.id}/zone`;
       const response = await fetch(apiUrl, {
         method: 'PATCH',
         headers: { 

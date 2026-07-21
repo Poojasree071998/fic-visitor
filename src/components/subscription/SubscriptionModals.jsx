@@ -66,7 +66,7 @@ const SubscriptionModals = () => {
     }
 
     try {
-      const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com');
+      const baseUrl = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com');
       
       const orderRes = await fetch(`${baseUrl}/api/payment/create-order`, {
         method: 'POST',

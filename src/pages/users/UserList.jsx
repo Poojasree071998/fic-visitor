@@ -4,7 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 import { Users, UserPlus, Search, Shield, Building, Trash2, GraduationCap, Briefcase, UserCheck, Edit, X, Save } from 'lucide-react';
 
-const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/users`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/users`;
 
 const UserList = () => {
   const [users, setUsers] = useState([]);

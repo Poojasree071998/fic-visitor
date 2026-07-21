@@ -17,7 +17,7 @@ const Settings = () => {
         const logoUrl = document.getElementById('brand-logo').value;
         const primaryColor = document.getElementById('brand-color').value;
         
-        const response = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/company/branding`, {
+        const response = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/company/branding`, {
           method: 'PATCH',
           headers: {
             'Content-Type': 'application/json',

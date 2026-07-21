@@ -7,7 +7,7 @@ import { io } from 'socket.io-client';
 import { useNavigate } from 'react-router-dom';
 
 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.hostname.match(/^\d{1,3}\./);
-const API_URL = `${import.meta.env.VITE_API_URL || (isLocalhost ? `http://${window.location.hostname}:5000` : 'https://zone-monitor.onrender.com')}/api/notifications`;
+const API_URL = `${import.meta.env.VITE_API_URL || (isLocalhost ? `http://${window.location.hostname}:5000` : 'https://fic-visitor-1.onrender.com')}/api/notifications`;
 
 const Header = ({ toggleSidebar, isSidebarOpen }) => {
   const { user } = useAuth();
@@ -56,7 +56,7 @@ const Header = ({ toggleSidebar, isSidebarOpen }) => {
     
     const socketUrl = import.meta.env.VITE_API_URL 
       ? import.meta.env.VITE_API_URL.replace('/api', '')
-      : (isLocalhost ? `http://${window.location.hostname}:5000` : 'https://zone-monitor.onrender.com');
+      : (isLocalhost ? `http://${window.location.hostname}:5000` : 'https://fic-visitor-1.onrender.com');
     const socket = io(socketUrl);
     
     socket.on('new_notification', (notification) => {

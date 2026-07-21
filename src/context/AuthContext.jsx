@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
       
       // Handle 401 Unauthorized - Attempt Silent Refresh
       if (response.status === 401) {
-        const refreshUrl = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/auth/refresh`;
+        const refreshUrl = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/auth/refresh`;
         // Prevent infinite loops if the refresh itself is 401
         if (args[0] !== refreshUrl) {
           try {
@@ -71,7 +71,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password, rememberMe = false) => {
     try {
-      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/auth/login`;
+      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/auth/login`;
       console.log('Attempting login to:', url);
       
       let fcmToken = "";
@@ -118,7 +118,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/auth/logout`;
+      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/auth/logout`;
       await fetch(url, { method: 'POST', credentials: 'include' });
     } catch(err) {
       console.error(err);

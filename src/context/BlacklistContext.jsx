@@ -3,7 +3,7 @@ import { useBranch } from './BranchContext';
 import { useAuth } from './AuthContext';
 
 const BlacklistContext = createContext(null);
-const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/blacklist`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/blacklist`;
 
 export const BlacklistProvider = ({ children }) => {
   const { activeBranch } = useBranch();

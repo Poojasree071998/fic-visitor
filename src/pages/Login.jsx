@@ -28,7 +28,7 @@ const Login = () => {
   
   const { login } = useAuth();
   const navigate = useNavigate();
-  const API_BASE = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com');
+  const API_BASE = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com');
 
   const handleSubmit = async (e) => {
     e.preventDefault();

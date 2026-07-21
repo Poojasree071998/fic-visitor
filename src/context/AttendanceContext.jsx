@@ -3,7 +3,7 @@ import { useAuth } from './AuthContext';
 import { useBranch } from './BranchContext';
 
 const AttendanceContext = createContext(null);
-const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/attendance`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/attendance`;
 
 export const AttendanceProvider = ({ children }) => {
   const { user } = useAuth();

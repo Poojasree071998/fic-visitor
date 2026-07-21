@@ -20,7 +20,7 @@ export const BranchProvider = ({ children }) => {
 
       try {
         setLoadingBranches(true);
-        const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com');
+        const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com');
         const response = await fetch(`${API_URL}/api/branch-settings`, {
           headers: {
             ...(user.token && { 'Authorization': `Bearer ${user.token}` })

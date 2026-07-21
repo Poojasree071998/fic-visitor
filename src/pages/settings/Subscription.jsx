@@ -17,7 +17,7 @@ const Subscription = () => {
 
   const fetchCompanyDetails = async () => {
     try {
-      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/company/me`;
+      const url = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/company/me`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
@@ -29,7 +29,7 @@ const Subscription = () => {
         setCompanyDetails(data);
         
         // Fetch history
-        const histRes = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/payment/history`, {
+        const histRes = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/payment/history`, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }

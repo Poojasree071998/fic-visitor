@@ -16,7 +16,7 @@ const SendNotificationModal = ({ isOpen, onClose, company, onSend }) => {
     setIsSending(true);
     
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/super-admin/notify-company`, {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/super-admin/notify-company`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

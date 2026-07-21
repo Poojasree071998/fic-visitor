@@ -3,7 +3,7 @@ import { UserCheck } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useBranch } from '../../context/BranchContext';
 
-const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com')}/api/visitors`;
+const API_URL = `${import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com')}/api/visitors`;
 
 const TodaysVisitorsCard = () => {
   const { user: currentUser } = useAuth();

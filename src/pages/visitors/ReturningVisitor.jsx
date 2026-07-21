@@ -45,7 +45,7 @@ const ReturningVisitor = () => {
 
     setSearchStatus('searching');
     try {
-      const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://zone-monitor.onrender.com');
+      const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname === 'localhost' ? 'http://localhost:5000' : 'https://fic-visitor-1.onrender.com');
       const res = await fetch(`${API_URL}/api/visitors/profile/${query}`);
       
       if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
