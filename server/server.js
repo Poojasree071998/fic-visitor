@@ -43,12 +43,10 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: function (origin, callback) {
-    if (!origin || process.env.NODE_ENV !== 'production') return callback(null, true);
-    const allowedOrigins = process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',') : ['*'];
-    if (allowedOrigins.includes('*') || allowedOrigins.includes(origin)) return callback(null, true);
-    return callback(new Error('CORS policy violation'), false);
-  },
+  origin: [
+    'https://fic-visitor-1.vercel.app',
+    'http://localhost:5173'
+  ],
   credentials: true
 }));
 
