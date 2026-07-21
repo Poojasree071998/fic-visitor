@@ -12,10 +12,16 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: [
-      'https://fic-visitor-1.vercel.app',
-      'http://localhost:5173'
-    ],
+    origin: function (origin, callback) {
+      if (!origin) return callback(null, true);
+      if (origin.includes('localhost') || 
+          origin.includes('192.168') || 
+          origin.includes('10.') || 
+          origin === 'https://fic-visitor-1.vercel.app') {
+        return callback(null, true);
+      }
+      return callback(new Error('Not allowed by CORS'), false);
+    },
     methods: ["GET", "POST", "PATCH", "PUT", "DELETE"],
     credentials: true
   }
@@ -41,10 +47,16 @@ app.use(helmet({
 }));
 
 app.use(cors({
-  origin: [
-    'https://fic-visitor-1.vercel.app',
-    'http://localhost:5173'
-  ],
+  origin: function (origin, callback) {
+    if (!origin) return callback(null, true);
+    if (origin.includes('localhost') || 
+        origin.includes('192.168') || 
+        origin.includes('10.') || 
+        origin === 'https://fic-visitor-1.vercel.app') {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'), false);
+  },
   credentials: true
 }));
 

@@ -48,4 +48,46 @@ const notificationSchema = new mongoose.Schema(
   }
 );
 
+notificationSchema.pre('save', function() {
+  this.wasNew = this.isNew;
+});
+
+notificationSchema.post('save', async function(doc) {
+  if (doc.wasNew) {
+    try {
+      const User = mongoose.model('User');
+      const sendPushNotification = require('../utils/pushNotificationService');
+      
+      let query = { fcmToken: { $exists: true, $ne: '' } };
+      
+      if (doc.companyId && doc.companyId !== 'SYSTEM') {
+        query.companyId = doc.companyId;
+        if (doc.branchId && doc.branchId !== 'All Branches') {
+          query.$or = [
+            { branch: doc.branchId },
+            { branch: 'All Branches' },
+            { branchId: doc.branchId },
+            { branchId: 'All Branches' }
+          ];
+        }
+      } else if (doc.companyId === 'SYSTEM') {
+        query.role = 'SaaS Super Admin';
+      }
+
+      const usersToNotify = await User.find(query);
+      const tokens = usersToNotify.map(u => u.fcmToken);
+
+      if (tokens.length > 0) {
+        await sendPushNotification(tokens, doc.title, doc.message, {
+          notificationId: doc._id.toString(),
+          module: doc.module || 'System',
+          companyId: doc.companyId || 'SYSTEM'
+        });
+      }
+    } catch (err) {
+      console.error('Push notification auto-dispatch error:', err);
+    }
+  }
+});
+
 module.exports = mongoose.model("Notification", notificationSchema);
