@@ -125,7 +125,7 @@ router.post('/login', loginLimiter, async (req, res) => {
     // Explicitly construct the response object to ensure properties are added
     const responsePayload = {
       ...u,
-      branch: u.branchId,
+      branch: u.branch || u.branchId,
       companyName: company ? company.name : (u.companyId === 'SYSTEM' ? 'System Administration' : undefined),
       isExpired,
       subscription,

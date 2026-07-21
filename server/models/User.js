@@ -49,6 +49,9 @@ const userSchema = new mongoose.Schema({
     required: true,
     default: 'All Branches'
   },
+  branch: {
+    type: String
+  },
   fcmToken: {
     type: String,
     default: ""
