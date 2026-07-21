@@ -26,7 +26,7 @@ export default defineConfig({
   },
   define: {
     'import.meta.env.VITE_NETWORK_IP': JSON.stringify(getLocalIP()),
-    'import.meta.env.VITE_API_URL': JSON.stringify(`http://${getLocalIP()}:5000`),
+    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || `http://${getLocalIP()}:5000`),
   },
   plugins: [
     tailwindcss(),
